@@ -6,4 +6,6 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
 endif(MSVC)
 
-add_executable(lexer lexer.cpp) 
+add_subdirectory(fmt)
+
+add_executable(lexer src/lexer.cpp) 
