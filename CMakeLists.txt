@@ -9,3 +9,5 @@ endif(MSVC)
 add_subdirectory(fmt)
 
 add_executable(lexer src/lexer.cpp) 
+
+target_link_libraries(lexer PUBLIC fmt)
