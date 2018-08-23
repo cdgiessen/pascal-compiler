@@ -11,3 +11,10 @@ add_subdirectory(fmt)
 add_executable(lexer src/lexer.cpp) 
 
 target_link_libraries(lexer PUBLIC fmt)
+
+
+add_custom_command(
+        TARGET lexer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_SOURCE_DIR}/reserved_words.txt
+                ${CMAKE_CURRENT_BINARY_DIR}/reserved_words.txt)

@@ -1,0 +1,129 @@
+Pascal Grammar Reference
+
+
+
+
+program -> 
+    program_id ( identifier_list );
+    declarations
+    subprogram_declarations
+    compound_statement
+    .
+
+identifier_list ->
+    id
+    | identifier_list , id
+
+declarations ->
+    declarations var identifier_list : type;
+    | e
+
+type ->
+    standard_type
+    | array [num .. num] of standard_type
+
+standard_type ->
+    integer
+    | real
+
+subprogram_declarations ->
+    subprogram_declarations subprogram_declaration;
+    | e
+
+subprogram_declaration ->
+    subprogram_head declarations compound_statement
+
+subprogram_head ->
+    function id arugments : standard_type;
+    | procedure id arugments;
+
+arugments ->
+    ( parameter_list )
+    | e
+
+compound_statement ->
+    begin
+    optional_statements
+    end
+
+optional_statements ->
+    statement_list
+    | e
+
+statement_list ->
+    statement
+    | statement_list; statement
+
+statement ->
+    variable assignop expression
+    | procedure_statement
+    | compound_statement
+    | if expression then statement else statement
+    | while expression do statement
+
+variable ->
+    id
+    | id [ expression ]
+
+procedure_statement ->
+    id
+    | id ( expression_list )
+
+expression_list ->
+    expression
+    | expression_list, expression
+
+expression ->
+    simple_expression
+    | simple_expression relop simple_expression
+
+simple_expression ->
+    term
+    | sign_term
+    | simple_expression addop term
+
+term ->
+    factor
+    | term mulop factor
+
+factor ->
+    id
+    | id ( expression_list)
+    | num
+    | ( expression )
+    | not factor
+
+sign ->
+    + | -
+
+
+
+1. Comments are surrounded by { and }. They may not contain a {. 
+    Comments may appear after any token.
+
+2. Blanks between tokens are optional, with the exception that keywords
+    must be surrounded by blanks, newlines, the beginning of the program,
+    or the final dot.
+
+3. Token id for identifiers matches a letter followed by letters or digits:
+    letter -» [a-zA-z]
+    digit - [0-9]
+    id -* letter ( letter | digit )*
+    The implementer may wish to put a limit on identifier length.
+
+4. Token num matches unsigned integers (see Example 3.5):
+    digits -* digit digit*
+    optional-fraction -* . digits | e
+    optional-exponent -» ( E ( + | - | e ) digits ) | e
+    num -* digits optional-fraction optional-exponentSI'C. A.5 SUGGESTED EXERCISES 749
+
+5. Keywords are reserved and appear in boldface in the grammar.
+
+6. The relation operators (relop's) are: =, <>, <, <=, > = , and >. Note that
+    <> denotes +.
+
+7. The addop's are +, -, and or.
+
+8. The mulop's are *, /, div, mod, and and.
+
+9. The lexeme for token assignop is : =.
