@@ -8,11 +8,11 @@ function function 0
 procedure procedure 0
 begin begin 0
 end end 0
-if if 0
-then then 0
-else else 0
-while while 0
-do do 0
+if t_if 0
+then t_then 0
+else t_else 0
+while t_while 0
+do t_do 0
 not not 0
 or addop or
 div mulop div

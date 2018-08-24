@@ -2,6 +2,8 @@
 
 #include <array>
 #include <vector>
+#include <algorithm>
+#include <functional>
 #include <string>
 #include <fstream>
 #include <variant>
@@ -9,6 +11,8 @@
 #include <any>
 #include <memory>
 #include <unordered_set>
+
+#include <cstdio>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -71,7 +75,6 @@ enum class TokenType {
 };
 
 struct NoAttrib {
-    int val = 0;
 };
 
 enum class AddOpType {
@@ -106,11 +109,15 @@ using TokenAttribute = std::variant<NoAttrib,
     >;
 
 
+
 struct TokenInfo {
     TokenType type;
     TokenAttribute attrib;
-    int line_location;
-    int column_location;
+    int line_location = -1;
+    int column_location = -1;
+
+    TokenInfo(TokenType type, TokenAttribute attrib, int line, int column): 
+        type(type), attrib(attrib), line_location(line), column_location(column) {}
 };
 
 struct ReservedWord {
@@ -121,37 +128,24 @@ struct ReservedWord {
     ReservedWord(std::string word, TokenType type, TokenAttribute attrib):
         word(word), type(type), attrib(attrib) {};
 
-    bool operator==(const ReservedWord &other) const
-    { return (word == other.word
-              && type == other.type);
+    bool operator==(const ReservedWord &other) const { 
+        return (word == other.word && type == other.type);
     }
 };
 
 namespace std {
   template <>
-  struct hash<ReservedWord>
-  {
+  struct hash<ReservedWord> {
     size_t operator()(const ReservedWord& w) const
     {
       return hash<std::string>()(w.word);
     }
   };
-
-}
-
-using ProgramLine = std::array<char, line_buffer_length>;
-
-std::vector<TokenInfo> ParseLine(ProgramLine line ){
-    int cur_column = 0;
-
-    
-
-    return {};
 }
 
 std::optional<TokenType> ReadTokenTypeFromString(std::string s){
     if (s == "program") return TokenType::program;
-    if (s == "var") return TokenType::variable;
+    if (s == "variable") return TokenType::variable;
     if (s == "array") return TokenType::array;
     if (s == "of") return TokenType::of;
     if (s == "integer") return TokenType::integer;
@@ -166,22 +160,19 @@ std::optional<TokenType> ReadTokenTypeFromString(std::string s){
     if (s == "while") return TokenType::t_while;
     if (s == "do") return TokenType::t_do;
     if (s == "not") return TokenType::t_not;
-    if (s == "or") return TokenType::addop;
-    if (s == "div") return TokenType::mulop;
-    if (s == "mod") return TokenType::mulop;
-    if (s == "and") return TokenType::mulop;
+    if (s == "addop") return TokenType::addop;
+    if (s == "mulop") return TokenType::mulop;
     return {};
 }
 
 std::optional<TokenAttribute> ReadTokenAttributeFromString(std::string s){
-    if (s == "0") return NoAttrib{0};
+    if (s == "0") return NoAttrib{};
     if (s == "div") return MulOpType::div;
     if (s == "mod") return MulOpType::mod;
     if (s == "and") return MulOpType::t_and;
     if (s == "or") return AddOpType::t_or;
     return {};
 }
-
 
 std::unordered_set<ReservedWord> ReadReservedWordsFile(){
     std::unordered_set<ReservedWord> res_words;
@@ -197,8 +188,17 @@ std::unordered_set<ReservedWord> ReadReservedWordsFile(){
             auto attrib = ReadTokenAttributeFromString(attrib_s);
             if(type.has_value() && attrib.has_value())
                 res_words.emplace(word, type.value(), attrib.value());
+            else 
+                fmt::print("Reserved word not found! {}\n", word);
 
         }
+
+        fmt::print("Res Word size = {}\n", res_words.size());
+        fmt::print("Reserved Words:\n");
+        for(auto& item : res_words){
+            fmt::print("Word: {} \t {}\n", item.word, static_cast<int>(item.type));
+    }
+
     } 
     else {
         fmt::print("Reserved Word List not found!\n");
@@ -206,22 +206,139 @@ std::unordered_set<ReservedWord> ReadReservedWordsFile(){
     return res_words;
 }
 
-int main(int argc, char *argv[]){
-    std::string inFileName = "test_pascal.txt";
+enum class LexerErrorType {
+    Id,
+    Int,
+    Int,
+    SReal,
+    LReal,
+};
 
+enum class LexerErrorSubType {
+    TooLong,
+    ZeroLength,
+    LeadingZero,
+    TrailingZero,
+};
+
+struct LexerError {
+    LexerErrorType type;
+    LexerErrorSubType subType;
+    int line_location = -1;
+    int column_location = -1;
+
+    LexerError(LexerErrorType type, LexerErrorSubType subType, int line, int column): 
+        type(type), subType(subType), line_location(line), column_location(column) {}
+};
+
+struct LexerMachineReturn {
+    int chars_to_eat = 0;
+    std::variant<TokenInfo, LexerError> content;
+};
+
+
+using ProgramLine = std::array<char, line_buffer_length>;
+
+using LexerMachineFuncSig = std::function<std::optional<LexerMachineReturn>(ProgramLine& line, int index)>; 
+struct LexerMachine {
+    int precedence = 10;
+
+    LexerMachineFuncSig machine;
+    
+    LexerMachine(int precedence, LexerMachineFuncSig machine):
+        precedence(precedence), machine(machine) {};
+};
+
+class Lexer {
+public:
+    void AddMachine(LexerMachine machine);
+
+    std::vector<TokenInfo> GetTokens(ProgramLine line);
+private:
+    std::vector<LexerMachine> machines;
+};
+
+
+void Lexer::AddMachine(LexerMachine machine){
+    machines.push_back(machine);
+    std::sort(std::begin(machines), std::end(machines), 
+        [](LexerMachine a, LexerMachine b){ return a.precedence > b.precedence;});
+}
+
+std::vector<TokenInfo> Lexer::GetTokens(ProgramLine line)
+{
+    std::vector<TokenInfo> tokens;
+    
+    int backward_index = 0;
+    // int forward_index = 0;
+    
+    while(backward_index < line_buffer_length){
+        auto iter = std::begin(machines);
+        std::optional<LexerMachineReturn> machine_ret;
+        while(!machine.has_value() && iter != std::end(machines)){
+            val = iter->machine(line, backward_index);
+            iter++;
+        }
+        if(machine_ret.has_value() && iter != std::end(machines)){
+            backward_index += machine_ret->chars_to_eat;
+            if(machine_ret->content.has_value())
+            {
+                if(machine_ret->content.index() == 0){
+                    tokens.push_back(std::get<0>(machine_ret->content));
+                    fmt::print();
+                }
+                else if (machine_ret->content.index() == 1){
+                    
+                }
+            }
+        }
+    }
+    return tokens;
+}
+
+class OutputFileHandle {
+public:
+    OutputFileHandle(std::string file_name) {
+        fp = std::fopen(file_name.c_str(), "w");
+        if(!fp) {
+            std::perror("File opening failed");
+            return EXIT_FAILURE;
+        }
+        return fp;
+    }
+
+    ~OutputFileHandle(std::FILE* fp){
+        std::fclose(fp);
+    }
+
+    FILE* FP() {return fp;} const;
+private:
+    FILE* fp = nullptr;
+}
+
+int main(int argc, char *argv[]){
+    auto reserved_words = ReadReservedWordsFile();
+
+    std::string inFileName = "test_pascal.txt";
+    
     if(argc == 2){
         inFileName = std::string(argv[1]);
     }
 
     std::fstream inFile(inFileName);
-    
-    auto reserved_words = ReadReservedWordsFile();
-
-    fmt::print("Res Word size = {}\n", reserved_words.size());
-    fmt::print("Reserved Words:\n");
-    for(auto& item : reserved_words){
-        fmt::print("Word: {} \t\n", item.word);
+    if(inFile){
+        while(inFile.good()){
+            std::string line;
+            inFile >> line;
+            //needs whole line...
+            fmt::print("{}\n", line);
+        }
+    } else {
+        fmt::print("File not read, was there an error?");
     }
+
+    OutputFileHandle listing_file("listing_file.txt");
+    OutputFileHandle token_file("token_file.txt");
 
     return 0;
 }
