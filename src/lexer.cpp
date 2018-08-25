@@ -13,14 +13,10 @@
 #include <unordered_set>
 
 #include <cstdio>
+#include <cstring>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-
-
-std::FILE* listing_file_fp;
-std::FILE* token_file_fp;
-
 
 constexpr int line_buffer_length = 72;
 constexpr int identifier_length = 10;
@@ -121,6 +117,9 @@ struct TokenInfo {
     int line_location = -1;
     int column_location = -1;
 
+    TokenInfo(TokenType type, TokenAttribute attrib): 
+        type(type), attrib(attrib) {}
+
     TokenInfo(TokenType type, TokenAttribute attrib, int line, int column): 
         type(type), attrib(attrib), line_location(line), column_location(column) {}
 
@@ -205,9 +204,9 @@ std::unordered_set<ReservedWord> ReadReservedWordsFile(){
 
         fmt::print("Res Word size = {}\n", res_words.size());
         fmt::print("Reserved Words:\n");
-        for(auto& item : res_words){
-            fmt::print("Word: {} \t {}\n", item.word, static_cast<int>(item.type));
-    }
+        //for(auto& item : res_words){
+        //    fmt::print("Word: {} \t {}\n", item.word, static_cast<int>(item.type));
+        //}
 
     } 
     else {
@@ -215,6 +214,24 @@ std::unordered_set<ReservedWord> ReadReservedWordsFile(){
     }
     return res_words;
 }
+
+class OutputFileHandle {
+public:
+    OutputFileHandle(std::string file_name) {
+        fp = std::fopen(file_name.c_str(), "w");
+        if(!fp) {
+            fmt::print("File opening failed");
+        }
+    }
+
+    ~OutputFileHandle(){
+        std::fclose(fp);
+    }
+
+    FILE* FP() const {return fp;};
+private:
+    FILE* fp = nullptr;
+};
 
 enum class LexerErrorType {
     Id,
@@ -236,6 +253,10 @@ struct LexerError {
     int line_location = -1;
     int column_location = -1;
 
+
+    LexerError(LexerErrorType type, LexerErrorSubType subType): 
+        type(type), subType(subType) {}
+
     LexerError(LexerErrorType type, LexerErrorSubType subType, int line, int column): 
         type(type), subType(subType), line_location(line), column_location(column) {}
 
@@ -247,8 +268,9 @@ struct LexerError {
 
 struct LexerMachineReturn {
     int chars_to_eat = 0;
-    std::variant<std::monostate, TokenInfo, LexerError> content;
-
+    std::optional<std::variant<TokenInfo, LexerError>> content;
+    
+    LexerMachineReturn(int chars_to_eat): chars_to_eat(chars_to_eat) {};
     LexerMachineReturn(int chars_to_eat, TokenInfo token ): 
         chars_to_eat(chars_to_eat), content(token){} 
     LexerMachineReturn(int chars_to_eat, LexerError error ):
@@ -271,11 +293,19 @@ struct LexerMachine {
 
 class Lexer {
 public:
+    Lexer(): listing_file("listing_file.txt"), token_file("token_file.txt")
+    {
+        CreateMachines();
+    }
+
+    void CreateMachines();
     void AddMachine(LexerMachine&& machine);
 
-    std::vector<TokenInfo> GetTokens(ProgramLine line);
+    std::vector<TokenInfo> GetTokens(ProgramLine line, int cur_line_number);
 private:
     std::vector<LexerMachine> machines;
+    OutputFileHandle listing_file;
+    OutputFileHandle token_file;
 };
 
 
@@ -287,7 +317,7 @@ void Lexer::AddMachine(LexerMachine&& machine){
 
 
 
-std::vector<TokenInfo> Lexer::GetTokens(ProgramLine line)
+std::vector<TokenInfo> Lexer::GetTokens(ProgramLine line, int cur_line_number)
 {
     std::vector<TokenInfo> tokens;
     
@@ -303,68 +333,60 @@ std::vector<TokenInfo> Lexer::GetTokens(ProgramLine line)
         }
         if(machine_ret.has_value() && iter != std::end(machines)){
             backward_index += machine_ret->chars_to_eat;
-            //if(machine_ret->content.index() == 0)
-            //{
-                if(machine_ret->content.index() == 1){
-                    tokens.push_back(std::get<1>(machine_ret->content));
-                    fmt::print(token_file_fp, "{}\n", std::get<1>(machine_ret->content));
+            if(machine_ret->content.has_value())
+            {
+                if(machine_ret->content->index() == 0){
+                    std::get<0>((*machine_ret->content)).line_location = cur_line_number;
+                    std::get<0>((*machine_ret->content)).column_location = backward_index;
+                    
+                    tokens.push_back(std::get<0>((*machine_ret->content)));
+                    fmt::print(token_file.FP(), "{}\n", std::get<0>((*machine_ret->content)));
                 }
-                else if (machine_ret->content.index() == 2){
-                    fmt::print(listing_file_fp, "{}\n", std::get<2>(machine_ret->content));
+                else if (machine_ret->content->index() == 1){
+                    std::get<1>((*machine_ret->content)).line_location = cur_line_number;
+                    std::get<1>((*machine_ret->content)).column_location = backward_index;
+                    
+                    fmt::print(listing_file.FP(), "{}\n", std::get<1>((*machine_ret->content)));
                 }
             //fmt::print(token_file_fp, "iterateion\n");
-            //}
+            }
         }
     }
     return tokens;
 }
 
-class OutputFileHandle {
-public:
-    OutputFileHandle(std::string file_name) {
-        fp = std::fopen(file_name.c_str(), "w");
-        if(!fp) {
-            std::perror("File opening failed");
-        }
-    }
-
-    ~OutputFileHandle(){
-        std::fclose(fp);
-    }
-
-    FILE* FP() const {return fp;};
-private:
-    FILE* fp = nullptr;
-};
-
-void CreateMachines(Lexer& lexer){
-    lexer.AddMachine({"Whitespace", 100,
+void Lexer::CreateMachines(){
+    AddMachine({"Whitespace", 100,
         [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>
         {
-            return LexerMachineReturn(1, TokenInfo(TokenType::term, NoAttrib{}, -1, index));
+            //return LexerMachineReturn(1, LexerError(LexerErrorType::Id, LexerErrorSubType::TooLong));
+            if(line[index] == ' ' || line[index] == '\t' || line[index] == '\n' || line[index] == '\0')
+                return LexerMachineReturn(1);
         }}
     );
-    lexer.AddMachine({"IdRes", 70,
+    AddMachine({"IdRes", 70,
+        [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
+            if(line[index] != ' ' && line[index] != '\t' || line[index] != '\n')
+                return LexerMachineReturn(1, TokenInfo(TokenType::id, NoAttrib()));
+        }}
+    );
+    AddMachine({"Catch-all", 80,
+        [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
+            if(line[index] == '(' || line[index] == ')')
+                return LexerMachineReturn(1, TokenInfo(TokenType::integer, NoAttrib()));
+        }}
+    );
+    AddMachine({"Real", 50,
         [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
             //stuff
         }}
     );
-    lexer.AddMachine({"Catch-all", 80,
+    AddMachine({"Integer", 50,
         [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
             //stuff
         }}
     );
-    lexer.AddMachine({"Real", 50,
-        [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
-            //stuff
-        }}
-    );
-    lexer.AddMachine({"Integer", 50,
-        [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
-            //stuff
-        }}
-    );
-    lexer.AddMachine({"Relop", 50,
+    AddMachine({"Relop", 50,
         [](ProgramLine& line, int index)->std::optional<LexerMachineReturn>{
             //stuff
         }}
@@ -381,36 +403,38 @@ int main(int argc, char *argv[]){
         inFileName = std::string(argv[1]);
     }
 
-    OutputFileHandle listing_file("listing_file.txt");
-    listing_file_fp = listing_file.FP();
-    OutputFileHandle token_file("token_file.txt");
-    token_file_fp = token_file.FP();
-
-
     Lexer lexer;
-    CreateMachines(lexer);
-
 
     fmt::print("Prining input file\n");
-    std::fstream inFile(inFileName);
+
+    try{
+
+    std::fstream inFile(inFileName, std::ios::in);
     if(inFile){
+        int cur_line_number = 1;
         while(inFile.good()){
             std::string line;
+            
             std::getline(inFile, line);
-            fmt::print("Code: {}\n", line);
+            
+            if(line.size() > 0){
 
-            ProgramLine l;
-            for(int i = 0; i < line.length(); i++){
-                l[i] = line[i];
+                ProgramLine l;
+                fmt::print("l length: {}, string length: {}\t", 0, line.length());
+
+                std::memcpy(&l, line.c_str(), line.length());
+                fmt::print("cur line: {}\t", cur_line_number);
+                lexer.GetTokens(l, cur_line_number);
+                fmt::print("Code: {}\n", line);
             }
 
-            lexer.GetTokens(l);
-        
+            cur_line_number++;
         }
     } else {
         fmt::print("File not read, was there an error?");
     }
-
-
+} catch(const std::exception& e){
+        fmt::print("{}", e.what());
+    }
     return 0;
 }
