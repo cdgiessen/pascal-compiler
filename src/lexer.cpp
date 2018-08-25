@@ -255,6 +255,13 @@ struct ReservedWord
 	{
 		return (word == other.word && type == other.type);
 	}
+
+	bool operator== (const std::string &s) const
+	{
+		return (word == s);
+	}
+
+	TokenInfo GetToken () const { return TokenInfo (type, attrib);	}
 };
 
 namespace std
@@ -335,6 +342,14 @@ ReservedWordList ReadReservedWordsFile ()
 	return res_words;
 }
 
+std::optional<TokenInfo> CheckReseredWords (ReservedWordList &list, std::string s) { 
+	for (auto& item : list){
+		if (item == s) 
+			return item.GetToken ();
+	}
+	return {};
+}
+
 class OutputFileHandle
 {
 	public:
@@ -396,6 +411,13 @@ std::ostream &operator<< (std::ostream &os, const ProgramLine &t)
 	return os;
 }
 
+std::string Str_ProgramLine (ProgramLine &line)
+{
+	std::string s;
+	for (auto &c : line)
+		s.append (1, c);
+	return s;
+}
 
 ProgramLine Sub_ProgramLine (ProgramLine &line, int indexesToCopy)
 {
@@ -509,7 +531,7 @@ std::vector<TokenInfo> Lexer::GetTokens (std::string s_line, int cur_line_number
 		buffer.insert (std::begin (buffer), std::begin (full_line) + backward_index, std::end (full_line));
 
 		auto iter = std::begin (machines);
-		std::optional<LexerMachineReturn> machine_ret;
+		std::optional<LexerMachineReturn> machine_ret = {};
 		while (!machine_ret.has_value () && iter != std::end (machines))
 		{
 			machine_ret = iter->machine (buffer);
@@ -537,6 +559,7 @@ std::vector<TokenInfo> Lexer::GetTokens (std::string s_line, int cur_line_number
 					std::get<2> ((machine_ret->content)).line_location = cur_line_number;
 					std::get<2> ((machine_ret->content)).column_location = backward_index;
 
+					fmt::print (token_file.FP (), "LEXERR:\t{}\n", std::get<2> ((machine_ret->content)));
 					fmt::print (listing_file.FP (), "LEXERR:\t{}\n", std::get<2> ((machine_ret->content)));
 				}
 			}
@@ -550,37 +573,44 @@ std::vector<TokenInfo> Lexer::GetTokens (std::string s_line, int cur_line_number
 	return tokens;
 }
 
+
 void Lexer::CreateMachines ()
 {
 	AddMachine ({ "Whitespace", 100, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		             int consecutive_whitespace = 0;
-
-		             for (int i = 0; i < line.size (); i++)
+		             int i = 0;
+		             while (line[i] == ' ' || line[i] == '\t' || line[i] == '\n' || line[i] == '\0')
 		             {
-			             if (line[i] == ' ' || line[i] == '\t' || line[i] == '\n' || line[i] == '\0')
-				             consecutive_whitespace++;
+			             i++;
 		             }
-		             if (consecutive_whitespace > 0) return LexerMachineReturn (1);
+		             
+		             if (i > 0)
+			             return LexerMachineReturn (i);
 		             return {};
 	             } });
-	AddMachine ({ "IdRes", 70, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	AddMachine ({ "IdRes", 70, [&](ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             if (line.size () >= 1 && std::isalpha (line[0]))
 		             {
 			             int index = 0;
+
 			             while (index < line.size () && std::isalnum (line[index]))
 			             {
 				             index++;
 			             }
 			             if (index <= identifier_length)
 			             {
-				             return LexerMachineReturn (index + 1, TokenInfo (TokenType::id, NoAttrib ()));
-			             }
-			             else
-			             {
-				             return LexerMachineReturn (index + 1,
-				                                        LexerError (LexerErrorType::Id, LexerErrorSubType::TooLong,
-				                                                    Sub_ProgramLine (line, index)));
-			             }
+				             auto res_word =
+				                 CheckReseredWords (reservedWords,
+				                                    Str_ProgramLine (Sub_ProgramLine (line, index)));
+				             if (res_word.has_value ())
+				             {
+					             return LexerMachineReturn (index, res_word.value ());
+				             }
+				             return LexerMachineReturn (index, TokenInfo (TokenType::id, NoAttrib ()));
+			             }			            
+						 return LexerMachineReturn (index, LexerError (LexerErrorType::Id,
+				                                                           LexerErrorSubType::TooLong,
+				                                                           Sub_ProgramLine (line, index)));
+			             
 		             }
 
 		             return {};
@@ -604,6 +634,8 @@ void Lexer::CreateMachines ()
 				     return LexerMachineReturn (1, TokenInfo (TokenType::semicolon, NoAttrib ()));
 			     if (line[0] == '.')
 				     return LexerMachineReturn (1, TokenInfo (TokenType::dot, NoAttrib ()));
+			     if (line[0] == ',')
+				     return LexerMachineReturn (1, TokenInfo (TokenType::comma, NoAttrib ()));
 			     if (line[0] == ':')
 				     return LexerMachineReturn (1, TokenInfo (TokenType::colon, NoAttrib ()));
 			     if (line[0] == '[')
