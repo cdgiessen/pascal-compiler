@@ -2,8 +2,8 @@ program program 0
 var variable 0
 array array 0
 of of 0
-integer integer 0
-real real 0
+integer integer integer
+real real real
 function function 0
 procedure procedure 0
 begin begin 0
