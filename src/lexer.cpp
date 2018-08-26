@@ -19,6 +19,8 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+#include "enumstring.h"
+
 constexpr int line_buffer_length = 72;
 constexpr int identifier_length = 10;
 constexpr int integer_digit_length = 10;
@@ -34,31 +36,17 @@ class AST_root
 
 enum class TokenType
 {
+
 	program,
-	identifier_list,
 	id,
-	declarations,
-	type,
 	standard_type,
 	integer,
 	real,
-	subprogram_declarations,
-	subprogram_declaration,
-	subprogram_head,
 	function,
 	procedure,
-	arguments,
-	parameter_list,
-	compound_statement,
-	optional_statements,
-	statement_list,
-	statement,
 	assignop,
 	variable,
 	array,
-	procedure_statement,
-	expression_list,
-	expression,
 	relop,
 	simple_expression,
 	addop,
@@ -87,60 +75,13 @@ enum class TokenType
 	eof,
 };
 
-std::ostream &operator<< (std::ostream &os, const TokenType &t)
-{
-	if (t == TokenType::program) return os << static_cast<int> (t) << " (PROG)";
-	if (t == TokenType::identifier_list) return os << static_cast<int> (t) << " (ID_LST)";
-	if (t == TokenType::id) return os << static_cast<int> (t) << " (ID)";
-	if (t == TokenType::declarations) return os << static_cast<int> (t) << " (DEC)";
-	if (t == TokenType::type) return os << static_cast<int> (t) << " (TYPE)";
-	if (t == TokenType::standard_type) return os << static_cast<int> (t) << " (STD_TYPE)";
-	if (t == TokenType::integer) return os << static_cast<int> (t) << " (INT)";
-	if (t == TokenType::real) return os << static_cast<int> (t) << " (REAL)";
-	if (t == TokenType::subprogram_declarations) return os << static_cast<int> (t) << " (SUB_DECS)";
-	if (t == TokenType::subprogram_declaration) return os << static_cast<int> (t) << " (SUB_DEC)";
-	if (t == TokenType::subprogram_head) return os << static_cast<int> (t) << " (SUB_HEAD)";
-	if (t == TokenType::function) return os << static_cast<int> (t) << " (FUNC)";
-	if (t == TokenType::procedure) return os << static_cast<int> (t) << " (PROC)";
-	if (t == TokenType::arguments) return os << static_cast<int> (t) << " (ARGS)";
-	if (t == TokenType::parameter_list) return os << static_cast<int> (t) << " (PRM_LST)";
-	if (t == TokenType::compound_statement) return os << static_cast<int> (t) << " (COM_STMT)";
-	if (t == TokenType::optional_statements) return os << static_cast<int> (t) << " (OPT_STMT)";
-	if (t == TokenType::statement_list) return os << static_cast<int> (t) << " (STMT_LST)";
-	if (t == TokenType::statement) return os << static_cast<int> (t) << " (STMT)";
-	if (t == TokenType::assignop) return os << static_cast<int> (t) << " (ASSIGN)";
-	if (t == TokenType::variable) return os << static_cast<int> (t) << " (VAR)";
-	if (t == TokenType::array) return os << static_cast<int> (t) << " (ARRAY)";
-	if (t == TokenType::procedure_statement) return os << static_cast<int> (t) << " (PROC_STMT)";
-	if (t == TokenType::expression_list) return os << static_cast<int> (t) << " (EXP_LIST)";
-	if (t == TokenType::expression) return os << static_cast<int> (t) << " (EXP)";
-	if (t == TokenType::relop) return os << static_cast<int> (t) << " (RELOP)";
-	if (t == TokenType::simple_expression) return os << static_cast<int> (t) << " (SIMP_EXP)";
-	if (t == TokenType::addop) return os << static_cast<int> (t) << " (ADDOP)";
-	if (t == TokenType::term) return os << static_cast<int> (t) << " (TERM)";
-	if (t == TokenType::mulop) return os << static_cast<int> (t) << " (MULOP)";
-	if (t == TokenType::factor) return os << static_cast<int> (t) << " (FACT)";
-	if (t == TokenType::sign) return os << static_cast<int> (t) << " (SIGN)";
-	if (t == TokenType::begin) return os << static_cast<int> (t) << " (BEGIN)";
-	if (t == TokenType::end) return os << static_cast<int> (t) << " (END)";
-	if (t == TokenType::t_not) return os << static_cast<int> (t) << " (NOT)";
-	if (t == TokenType::of) return os << static_cast<int> (t) << " (OF)";
-	if (t == TokenType::t_if) return os << static_cast<int> (t) << " (IF)";
-	if (t == TokenType::t_then) return os << static_cast<int> (t) << " (THEN)";
-	if (t == TokenType::t_else) return os << static_cast<int> (t) << " (ELSE)";
-	if (t == TokenType::t_while) return os << static_cast<int> (t) << " (WHILE)";
-	if (t == TokenType::t_do) return os << static_cast<int> (t) << " (DO)";
-	if (t == TokenType::paren_open) return os << static_cast<int> (t) << " (PAREN_O)";
-	if (t == TokenType::paren_close) return os << static_cast<int> (t) << " (PAREN_C)";
-	if (t == TokenType::semicolon) return os << static_cast<int> (t) << " (SEMIC)";
-	if (t == TokenType::dot) return os << static_cast<int> (t) << " (DOT)";
-	if (t == TokenType::comma) return os << static_cast<int> (t) << " (COMMA)";
-	if (t == TokenType::colon) return os << static_cast<int> (t) << " (COLON)";
-	if (t == TokenType::bracket_open) return os << static_cast<int> (t) << " (BRKT_O)";
-	if (t == TokenType::bracket_close) return os << static_cast<int> (t) << " (BRKT_C)";
-	if (t == TokenType::dot_dot) return os << static_cast<int> (t) << " (DOT_DOT)";
-	if (t == TokenType::eof) return os << static_cast<int> (t) << " (EOF)";
-}
+template <> char const *enumStrings<TokenType>::data[] = {
+	"(PROG)",   "(ID)",     "(STD_TYPE)", "(INT)",      "(REAL)",  "(FUNC)", "(PROC)",  "(ASSIGN)",
+	"(VAR)",    "(ARRAY)",  "(RELOP)",    "(SIMP_EXP)", "(ADDOP)", "(TERM)", "(MULOP)", "(FACT)",
+	"(SIGN)",   "(BEGIN)",  "(END)",      "(NOT)",      "(OF)",    "(IF)",   "(THEN)",  "(ELSE)",
+	"(WHILE)",  "(DO)",     "(PAREN_O)",  "(PAREN_C)",  "(SEMIC)", "(DOT)",  "(COMMA)", "(COLON)",
+	"(BRKT_O)", "(BRKT_C)", "(DOT_DOT)",  "(EOF)",
+};
 
 struct NoAttrib
 {
@@ -153,34 +94,39 @@ enum class StandardType
 	real
 };
 
-std::ostream &operator<< (std::ostream &os, const StandardType &t)
+template <> char const *enumStrings<StandardType>::data[] = { "INT", "REAL" };
+
+struct IntType
 {
-	if (t == StandardType::integer) return os << static_cast<int> (t) << '\t' << "(ST_INT)";
-	return os << static_cast<int> (t) << '\t' << "(ST_REAL)";
-}
+	int val;
+	IntType (int a) : val (a) {}
 
-struct IntType {
-    int val;
-    IntType(int a): val(a) {}
-
-    friend std::ostream &operator<< (std::ostream &os, const IntType &t) { return os << t.val << "(INT)"; }
+	friend std::ostream &operator<< (std::ostream &os, const IntType &t)
+	{
+		return os << t.val << "(INT)";
+	}
 };
 
 struct FloatType
 {
-    float val;
-    FloatType(float a): val(a) {}
+	float val;
+	FloatType (float a) : val (a) {}
 
-    friend std::ostream &operator<< (std::ostream &os, const FloatType &t) { return os << t.val << "(FLOAT)"; }
+	friend std::ostream &operator<< (std::ostream &os, const FloatType &t)
+	{
+		return os << t.val << "(FLOAT)";
+	}
 };
 
 struct SymbolType
 {
-    int loc = -1;
-    SymbolType(int loc): loc(loc) {}
+	int loc = -1;
+	SymbolType (int loc) : loc (loc) {}
 
-    friend std::ostream &operator<< (std::ostream &os, const SymbolType &t) 
-        { return os << t.loc << "(ptr in symbol table)"; }
+	friend std::ostream &operator<< (std::ostream &os, const SymbolType &t)
+	{
+		return os << t.loc << " (index in symbol table)";
+	}
 };
 
 enum class AddOpType
@@ -189,13 +135,7 @@ enum class AddOpType
 	minus, //-
 	t_or   // or
 };
-
-std::ostream &operator<< (std::ostream &os, const AddOpType &t)
-{
-	if (t == AddOpType::plus) return os << static_cast<int> (t) << '\t' << "(PLUS)";
-	if (t == AddOpType::minus) return os << static_cast<int> (t) << '\t' << "(MINUS)";
-	return os << static_cast<int> (t) << '\t' << "or";
-}
+template <> char const *enumStrings<AddOpType>::data[] = { "PLUS", "MINUS", "OR" };
 
 enum class MulOpType
 {
@@ -205,24 +145,15 @@ enum class MulOpType
 	t_and // and
 };
 
-std::ostream &operator<< (std::ostream &os, const MulOpType &t)
-{
-	if (t == MulOpType::mul) return os << static_cast<int> (t) << '\t' << "(MUL)";
-	if (t == MulOpType::div) return os << static_cast<int> (t) << '\t' << "(DIV)";
-	if (t == MulOpType::mod) return os << static_cast<int> (t) << '\t' << "(MOD)";
-	return os << static_cast<int> (t) << '\t' << "(AND)";
-}
+template <> char const *enumStrings<MulOpType>::data[] = { "MUL", "DIV", "MOD", "AND" };
 
 enum class SignOpType
 {
 	plus, //+
 	minus //-
 };
-std::ostream &operator<< (std::ostream &os, const SignOpType &t)
-{
-	if (t == SignOpType ::plus) return os << static_cast<int> (t) << '\t' << "(PLUS)";
-	return os << static_cast<int> (t) << '\t' << "(MINUS)";
-}
+
+template <> char const *enumStrings<SignOpType>::data[] = {	"PLUS",	"MINUS"};
 
 enum class RelOpType
 {
@@ -234,26 +165,22 @@ enum class RelOpType
 	greater_than_or_equal //>=
 };
 
-std::ostream &operator<< (std::ostream &os, const RelOpType &t)
-{
-	if (t == RelOpType::equal) return os << static_cast<int> (t) << '\t' << "(EQ)";
-	if (t == RelOpType::not_equal) return os << static_cast<int> (t) << '\t' << "(NEQ)";
-	if (t == RelOpType::less_than) return os << static_cast<int> (t) << '\t' << "(LT)";
-	if (t == RelOpType::less_than_or_equal) return os << static_cast<int> (t) << '\t' << "(LEQ)";
-	if (t == RelOpType::greater_than) return os << static_cast<int> (t) << '\t' << "(GT)";
-	return os << static_cast<int> (t) << '\t' << "(GEQ)";
-}
+template <> char const *enumStrings<RelOpType>::data[] = { "EQ", "NEQ", "LT", "LEQ", "GT", "GEQ" };
 
-using TokenAttribute = std::variant<NoAttrib, StandardType, AddOpType, MulOpType, 
-    SignOpType, RelOpType, IntType, FloatType, SymbolType>;
+using TokenAttribute =
+std::variant<NoAttrib, StandardType, AddOpType, MulOpType, SignOpType, RelOpType, IntType, FloatType, SymbolType>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 {
 	if (t.index () == 0) return os << std::get<0> (t);
-	if (t.index () == 1) return os << std::get<1> (t);
-	if (t.index () == 2) return os << std::get<2> (t);
-	if (t.index () == 3) return os << std::get<3> (t);
-	if (t.index () == 4) return os << std::get<4> (t);
+	if (t.index () == 1) return os << enumToString(std::get<1> (t));
+	if (t.index () == 2) return os << enumToString(std::get<2> (t));
+	if (t.index () == 3) return os << enumToString(std::get<3> (t));
+	if (t.index () == 4) return os << enumToString(std::get<4> (t));
+	if (t.index () == 5) return os << enumToString(std::get<5> (t));
+	if (t.index () == 6) return os << std::get<6> (t);
+	if (t.index () == 7) return os << std::get<7> (t);
+	if (t.index () == 8) return os << std::get<8> (t);
 }
 
 struct TokenInfo
@@ -272,9 +199,7 @@ struct TokenInfo
 
 	friend std::ostream &operator<< (std::ostream &os, const TokenInfo &t)
 	{
-		return os << '\t' << t.line_location << '\t' << t.type << '\t' << t.attrib;
-
-		//  << static_cast<int>(t.attrib)
+		return os << '\t' << t.line_location << '\t' << enumToString (t.type) << '\t' << t.attrib;
 	}
 };
 
@@ -405,26 +330,28 @@ class OutputFileHandle
 
 class SymbolTable
 {
-public:
-    int AddSymbol(std::string&& symbol){
-        int i = 0;
-        for(i = 0; i < symbols.size(); i++){
-            if(symbol == symbols[i])
-                return i;  
-        }
-        symbols.push_back(symbol);
-        return i;
-    }
+	public:
+	int AddSymbol (std::string &&symbol)
+	{
+		int i = 0;
+		for (i = 0; i < symbols.size (); i++)
+		{
+			if (symbol == symbols[i]) return i;
+		}
+		symbols.push_back (symbol);
+		return i;
+	}
 
-    int GetSymbolLocation(std::string& symbol){
-        for(int i = 0; i < symbols.size(); i++){
-            if(symbol == symbols[i])
-                return i;  
-        }
-        return -1;
-    }
+	int GetSymbolLocation (std::string &symbol)
+	{
+		for (int i = 0; i < symbols.size (); i++)
+		{
+			if (symbol == symbols[i]) return i;
+		}
+		return -1;
+	}
 
-private:
+	private:
 	std::vector<std::string> symbols;
 };
 
@@ -435,14 +362,7 @@ enum class LexerErrorType
 	SReal,
 	LReal,
 };
-
-std::ostream &operator<< (std::ostream &os, LexerErrorType t)
-{
-	if (t == LexerErrorType::Id) return os << "id";
-	if (t == LexerErrorType::Int) return os << "int";
-	if (t == LexerErrorType::SReal) return os << "sReal";
-	return os << "lReal"; // guaranteed return value, no bad paths
-}
+template <> char const *enumStrings<enum class LexerErrorType>::data[] = { "id", "int", "sreal", "lreal" };
 
 enum class LexerErrorSubType
 {
@@ -450,17 +370,10 @@ enum class LexerErrorSubType
 	ZeroLength,
 	LeadingZero,
 	TrailingZero,
-    InvalidNumericLiteral,
+	InvalidNumericLiteral,
 };
-
-std::ostream &operator<< (std::ostream &os, LexerErrorSubType t)
-{
-	if (t == LexerErrorSubType::TooLong) return os << "Too Long";
-	if (t == LexerErrorSubType::ZeroLength) return os << "Zero Length";
-	if (t == LexerErrorSubType::TrailingZero) return os << "Trailing Zero";
-    if (t == LexerErrorSubType::InvalidNumericLiteral) return os << "InvalidNumericLiteral";
-	return os << "Leading Zero"; // guaranteed return value, no bad paths
-}
+template <>
+char const *enumStrings<enum class LexerErrorSubType>::data[] = { "TooLong", "ZeroLength", "LeadingZero", "TrailingZero","InvalidNumericLiteral" };
 
 using ProgramLine = std::vector<char>;
 
@@ -511,7 +424,7 @@ struct LexerError
 
 	friend std::ostream &operator<< (std::ostream &os, const LexerError &t)
 	{
-		return os << t.type << '\t' << t.subType << '\t' << t.errorData;
+		return os << enumToString (t.type) << '\t' << enumToString(t.subType) << '\t' << t.errorData;
 	}
 };
 
@@ -567,7 +480,7 @@ class Lexer
 	std::vector<LexerMachine> machines;
 	bool isInComment = false;
 	ReservedWordList reservedWords;
-    SymbolTable symbolTable;
+	SymbolTable symbolTable;
 	OutputFileHandle listing_file;
 	OutputFileHandle token_file;
 };
@@ -584,13 +497,13 @@ void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineRetu
 	if (content.index () == 1)
 	{
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14}{:<14}{:<14}\n", line_num, lexeme,
-		            std::get<1> (content).type, std::get<1> (content).attrib.index (),
+		            enumToString(std::get<1> (content).type), std::get<1> (content).attrib.index (),
 		            std::get<1> (content).attrib);
 	}
 	else if (content.index () == 2)
 	{
-		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14} ({} {})\n", line_num, lexeme,
-		            "99 (LEXERR)", std::get<2> (content).type, std::get<2> (content).subType);
+		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14} ({} {})\n", line_num, lexeme, "99 (LEXERR)",
+		            enumToString (std::get<2> (content).type),  enumToString (std::get<2> (content).subType));
 	}
 	else
 	{
@@ -683,8 +596,7 @@ void Lexer::CreateMachines ()
 			             {
 				             isInComment = false;
 				             i++;
-				             if (i > line.size ()) 
-							 i = line.size () - 1; // overflow?
+				             //if (i > line.size ()) i = line.size () - 1; // overflow?
 			             }
 			             return LexerMachineReturn (i);
 		             }
@@ -718,9 +630,9 @@ void Lexer::CreateMachines ()
 				 CheckReseredWords (reservedWords, Str_ProgramLine (Sub_ProgramLine (line, index)));
 				 if (res_word.has_value ())
 				 { return LexerMachineReturn (index, res_word.value ()); }
-                int loc = symbolTable.AddSymbol(Str_ProgramLine (Sub_ProgramLine (line, index)));
+				 int loc = symbolTable.AddSymbol (Str_ProgramLine (Sub_ProgramLine (line, index)));
 
-				 return LexerMachineReturn (index, TokenInfo (TokenType::id, SymbolType(loc)));
+				 return LexerMachineReturn (index, TokenInfo (TokenType::id, SymbolType (loc)));
 			 }
 			 return LexerMachineReturn (index, LexerError (LexerErrorType::Id, LexerErrorSubType::TooLong,
 			                                               Sub_ProgramLine (line, index)));
@@ -766,86 +678,98 @@ void Lexer::CreateMachines ()
 		 return {};
 	 } });
 
-	AddMachine ({ "Real", 60, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		             int base_size = 0;
-		             int decimal_size = 0;
-		             int pow_size = 0;
-		             int i = 0;
-		             while (i < line.size () && std::isdigit (line[i]))
-		             {
-			             i++;
-			             base_size++;
-		             }
-		             if (i < line.size () && line[i] == '.') {
+	AddMachine (
+	{ "Real", 60, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
+		 int base_size = 0;
+		 int decimal_size = 0;
+		 int pow_size = 0;
+		 int i = 0;
+		 while (i < line.size () && std::isdigit (line[i]))
+		 {
+			 i++;
+			 base_size++;
+		 }
+		 if (i < line.size () && line[i] == '.')
+		 {
+			 i++;
+			 while (i < line.size () && std::isdigit (line[i]))
+			 {
+				 i++;
+				 decimal_size++;
+			 }
+			 if (i < line.size () && line[i] == 'E')
+			 {
+				 i++;
+				 while (i < line.size () && std::isdigit (line[i]))
+				 {
 					 i++;
-		             while (i < line.size () && std::isdigit (line[i]))
-		             {
-			             i++;
-			             decimal_size++;
-		             }
-		             if (i < line.size () && line[i] == 'E') 
-		             {
-			             i++;
-			             while (i < line.size () && std::isdigit (line[i]))
-			             {
-				             i++;
-				             pow_size++;
-			             }
-			             if (base_size < real_base_length && decimal_size < real_decimal_length && pow_size < real_exponent_length)
-			             {
-				             return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ()));
-			             }
-			             else
-			             {
-				             return LexerMachineReturn (i, LexerError (LexerErrorType::LReal,
-				                                                       LexerErrorSubType::TooLong,
-				                                                       Sub_ProgramLine (line, i)));
-			             }
-		             }
-		             else
-		             {
-			             if (base_size < real_base_length && decimal_size < real_decimal_length){
-				             return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ()));
-			             }else {
-					         return LexerMachineReturn (i, LexerError (LexerErrorType::SReal, LexerErrorSubType::TooLong, 
-							 Sub_ProgramLine(line, i)));
-			             }
-		             }
-					 }
-		             return {};
-	             } });
+					 pow_size++;
+				 }
+				 if (base_size < real_base_length && decimal_size < real_decimal_length && pow_size < real_exponent_length)
+				 { return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ())); } else
+				 {
+					 return LexerMachineReturn (i, LexerError (LexerErrorType::LReal, LexerErrorSubType::TooLong,
+					                                           Sub_ProgramLine (line, i)));
+				 }
+			 }
+			 else
+			 {
+				 if (base_size < real_base_length && decimal_size < real_decimal_length)
+				 { return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ())); } else
+				 {
+					 return LexerMachineReturn (i, LexerError (LexerErrorType::SReal, LexerErrorSubType::TooLong,
+					                                           Sub_ProgramLine (line, i)));
+				 }
+			 }
+		 }
+		 return {};
+	 } });
 
-	AddMachine ({ "Integer", 50, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		             int i = 0;
-					 while (i < line.size() && std::isdigit(line[i])) {
-			             i++;
-					 }
-		             if (i > 0){
-                         auto seq = Sub_ProgramLine(line, i);
-                         int val = 0;
-                         try{
-                             int val = std::stoi(Str_ProgramLine(seq));
+	AddMachine (
+	{ "Integer", 50, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
+		 int i = 0;
+		 while (i < line.size () && std::isdigit (line[i]))
+		 {
+			 i++;
+		 }
+		 if (i > 0)
+		 {
+			 auto seq = Sub_ProgramLine (line, i);
+			 int val = 0;
+			 try
+			 {
+				 int val = std::stoi (Str_ProgramLine (seq));
 
-                            if(i < integer_digit_length) {
-                                if( i > 1 && line[0] == '0'){
-                                   return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::LeadingZero, seq));    
-                                } else {
-			                       return LexerMachineReturn (i, TokenInfo (TokenType::integer, 
-                                       IntType (val)));
-                                }
-                            } else {
-                                return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::TooLong, seq));
-                            }
-                         }
-                         catch (std::out_of_range e) {
-                             return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::TooLong, seq));
-                         }
-                         catch (std::invalid_argument e) {
-                             return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::InvalidNumericLiteral, seq));
-                         }
-                     }
-		             return {};
-	             } });
+				 if (i < integer_digit_length)
+				 {
+					 if (i > 1 && line[0] == '0')
+					 {
+						 return LexerMachineReturn (i, LexerError (LexerErrorType::Int,
+						                                           LexerErrorSubType::LeadingZero, seq));
+					 }
+					 else
+					 {
+						 return LexerMachineReturn (i, TokenInfo (TokenType::integer, IntType (val)));
+					 }
+				 }
+				 else
+				 {
+					 return LexerMachineReturn (i, LexerError (LexerErrorType::Int,
+					                                           LexerErrorSubType::TooLong, seq));
+				 }
+			 }
+			 catch (std::out_of_range e)
+			 {
+				 return LexerMachineReturn (i, LexerError (LexerErrorType::Int, LexerErrorSubType::TooLong, seq));
+			 }
+			 catch (std::invalid_argument e)
+			 {
+				 return LexerMachineReturn (i, LexerError (LexerErrorType::Int,
+				                                           LexerErrorSubType::InvalidNumericLiteral, seq));
+			 }
+		 }
+		 return {};
+	 } });
 
 	AddMachine (
 	{ "Relop", 70, [](ProgramLine &line) -> std::optional<LexerMachineReturn> {
@@ -872,11 +796,11 @@ int main (int argc, char *argv[])
 {
 	auto reserved_words = ReadReservedWordsFile ();
 
-    std::vector<std::string> file_list;
-    file_list.push_back("test_input/test_passing.txt");
-    //file_list.push_back("test_input/test_error.txt");
+	std::vector<std::string> file_list;
+	file_list.push_back ("test_input/test_passing.txt");
+	// file_list.push_back("test_input/test_error.txt");
 
-	//if (argc == 2) { inFileName = std::string (argv[1]); }
+	// if (argc == 2) { inFileName = std::string (argv[1]); }
 
 	Lexer lexer;
 	lexer.LoadReservedWords (reserved_words);
@@ -885,7 +809,7 @@ int main (int argc, char *argv[])
 	try
 	{
 
-		std::fstream inFile (file_list.at(0), std::ios::in);
+		std::fstream inFile (file_list.at (0), std::ios::in);
 		if (inFile)
 		{
 			std::vector<std::string> lines;

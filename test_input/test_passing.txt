@@ -7,6 +7,14 @@ begin
 end;
 
 begin
-	read(x,y);
+	x:= 1;
+	x:= 1.2;
+	x:= 1.2E3;
+	x:= y;
+
+	read(x,y);{comment}
+	{
+	multiline comment
+	}
 	write(gcd(x,y))
 end.
