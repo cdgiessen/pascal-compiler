@@ -111,13 +111,13 @@ void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineRetu
 	if (content.index () == 1)
 	{
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14}{:<14}{:<14}\n", line_num, lexeme,
-		            enumToString(std::get<1> (content).type), std::get<1> (content).attrib.index (),
-		            std::get<1> (content).attrib);
+		            enumToString (std::get<1> (content).type),
+		            std::get<1> (content).attrib.index (), std::get<1> (content).attrib);
 	}
 	else if (content.index () == 2)
 	{
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14} ({} {})\n", line_num, lexeme, "99 (LEXERR)",
-		            enumToString (std::get<2> (content).type),  enumToString (std::get<2> (content).subType));
+		            enumToString (std::get<2> (content).type), enumToString (std::get<2> (content).subType));
 	}
 	else
 	{
@@ -210,7 +210,7 @@ void Lexer::CreateMachines ()
 			             {
 				             isInComment = false;
 				             i++;
-				             //if (i > line.size ()) i = line.size () - 1; // overflow?
+				             // if (i > line.size ()) i = line.size () - 1; // overflow?
 			             }
 			             return LexerMachineReturn (i);
 		             }
@@ -320,7 +320,22 @@ void Lexer::CreateMachines ()
 					 pow_size++;
 				 }
 				 if (base_size < real_base_length && decimal_size < real_decimal_length && pow_size < real_exponent_length)
-				 { return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ())); } else
+				 {
+					 auto sub = Sub_ProgramLine (line, i);
+					 float val;
+					 try
+					 {
+						 val = std::stof (Str_ProgramLine (sub));
+					 }
+					 catch (std::invalid_argument& e)
+					 {
+					 }
+					 catch (std::out_of_range& e) {
+					 
+					 }
+					 return LexerMachineReturn (i, TokenInfo (TokenType::real, FloatType (val)));
+				 }
+				 else
 				 {
 					 return LexerMachineReturn (i, LexerError (LexerErrorType::LReal, LexerErrorSubType::TooLong,
 					                                           Sub_ProgramLine (line, i)));
@@ -329,7 +344,22 @@ void Lexer::CreateMachines ()
 			 else
 			 {
 				 if (base_size < real_base_length && decimal_size < real_decimal_length)
-				 { return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ())); } else
+				 {
+					 auto sub = Sub_ProgramLine (line, i);
+					 float val;
+					 try
+					 {
+						 val = std::stof (Str_ProgramLine (sub));
+					 }
+					 catch (std::invalid_argument &e)
+					 {
+					 }
+					 catch (std::out_of_range &e)
+					 {
+					 } 
+				     return LexerMachineReturn (i, TokenInfo (TokenType::real, FloatType (val)));
+				 }
+				 else
 				 {
 					 return LexerMachineReturn (i, LexerError (LexerErrorType::SReal, LexerErrorSubType::TooLong,
 					                                           Sub_ProgramLine (line, i)));
