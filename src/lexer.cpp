@@ -159,12 +159,27 @@ std::ostream &operator<< (std::ostream &os, const StandardType &t)
 	return os << static_cast<int> (t) << '\t' << "(ST_REAL)";
 }
 
-struct NumberType
+struct IntType {
+    int val;
+    IntType(int a): val(a) {}
+
+    friend std::ostream &operator<< (std::ostream &os, const IntType &t) { return os << t.val << "(INT)"; }
+};
+
+struct FloatType
 {
+    float val;
+    FloatType(float a): val(a) {}
+
+    friend std::ostream &operator<< (std::ostream &os, const FloatType &t) { return os << t.val << "(FLOAT)"; }
 };
 
 struct SymbolType
 {
+    int loc = -1;
+    SymbolType(int loc): loc(loc) {}
+
+    friend std::ostream &operator<< (std::ostream &os, const SymbolType &t) { return os << t.loc << "(ptr in symbol table)"; }
 };
 
 enum class AddOpType
@@ -202,7 +217,7 @@ enum class SignOpType
 	plus, //+
 	minus //-
 };
-std::ostream &operator<< (std::ostream &os, const enum class SignOpType &t)
+std::ostream &operator<< (std::ostream &os, const SignOpType &t)
 {
 	if (t == SignOpType ::plus) return os << static_cast<int> (t) << '\t' << "(PLUS)";
 	return os << static_cast<int> (t) << '\t' << "(MINUS)";
@@ -228,7 +243,8 @@ std::ostream &operator<< (std::ostream &os, const RelOpType &t)
 	return os << static_cast<int> (t) << '\t' << "(GEQ)";
 }
 
-using TokenAttribute = std::variant<NoAttrib, StandardType, AddOpType, MulOpType, SignOpType, RelOpType>;
+using TokenAttribute = std::variant<NoAttrib, StandardType, AddOpType, MulOpType, 
+    SignOpType, RelOpType, IntType, FloatType, SymbolType>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 {
@@ -388,6 +404,26 @@ class OutputFileHandle
 
 class SymbolTable
 {
+public:
+    int AddSymbol(std::string&& symbol){
+        int i = 0;
+        for(i = 0; i < symbols.size(); i++){
+            if(symbol == symbols[i])
+                return i;  
+        }
+        symbols.push_back(symbol);
+        return i;
+    }
+
+    int GetSymbolLocation(std::string& symbol){
+        for(int i = 0; i < symbols.size(); i++){
+            if(symbol == symbols[i])
+                return i;  
+        }
+        return -1;
+    }
+
+private:
 	std::vector<std::string> symbols;
 };
 
@@ -432,7 +468,7 @@ std::ostream &operator<< (std::ostream &os, const ProgramLine &t)
 	return os;
 }
 
-std::string Str_ProgramLine (ProgramLine &line)
+std::string Str_ProgramLine (const ProgramLine &line)
 {
 	std::string s;
 	for (auto &c : line)
@@ -440,7 +476,7 @@ std::string Str_ProgramLine (ProgramLine &line)
 	return s;
 }
 
-ProgramLine Sub_ProgramLine (ProgramLine &line, int indexesToCopy)
+ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy)
 {
 	if (indexesToCopy >= line.size ())
 		return ProgramLine (line);
@@ -528,6 +564,7 @@ class Lexer
 	std::vector<LexerMachine> machines;
 	bool isInComment = false;
 	ReservedWordList reservedWords;
+    SymbolTable symbolTable;
 	OutputFileHandle listing_file;
 	OutputFileHandle token_file;
 };
@@ -678,7 +715,9 @@ void Lexer::CreateMachines ()
 				 CheckReseredWords (reservedWords, Str_ProgramLine (Sub_ProgramLine (line, index)));
 				 if (res_word.has_value ())
 				 { return LexerMachineReturn (index, res_word.value ()); }
-				 return LexerMachineReturn (index, TokenInfo (TokenType::id, NoAttrib ()));
+                int loc = symbolTable.AddSymbol(Str_ProgramLine (Sub_ProgramLine (line, index)));
+
+				 return LexerMachineReturn (index, TokenInfo (TokenType::id, SymbolType(loc)));
 			 }
 			 return LexerMachineReturn (index, LexerError (LexerErrorType::Id, LexerErrorSubType::TooLong,
 			                                               Sub_ProgramLine (line, index)));
@@ -779,7 +818,9 @@ void Lexer::CreateMachines ()
 			             i++;
 					 }
 		             if (i > 0)
-			             return LexerMachineReturn (i, TokenInfo (TokenType::integer, NoAttrib ()));
+			             return LexerMachineReturn (i, TokenInfo (TokenType::integer, IntType (
+                             std::stoi(Str_ProgramLine(Sub_ProgramLine(line, i)))
+                         )));
 		             return {};
 	             } });
 
