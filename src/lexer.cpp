@@ -1,37 +1,26 @@
 #include "lexer.h"
 
-std::optional<TokenType> ReadTokenTypeFromString (std::string s)
-{
-	if (s == "program") return TokenType::program;
-	if (s == "variable") return TokenType::variable;
-	if (s == "array") return TokenType::array;
-	if (s == "of") return TokenType::of;
-	if (s == "integer") return TokenType::standard_type;
-	if (s == "real") return TokenType::standard_type;
-	if (s == "function") return TokenType::function;
-	if (s == "procedure") return TokenType::procedure;
-	if (s == "begin") return TokenType::begin;
-	if (s == "end") return TokenType::end;
-	if (s == "t_if") return TokenType::t_if;
-	if (s == "t_then") return TokenType::t_then;
-	if (s == "t_else") return TokenType::t_else;
-	if (s == "t_while") return TokenType::t_while;
-	if (s == "t_do") return TokenType::t_do;
-	if (s == "not") return TokenType::t_not;
-	if (s == "addop") return TokenType::addop;
-	if (s == "mulop") return TokenType::mulop;
-	return {};
-}
-
-std::optional<TokenAttribute> ReadTokenAttributeFromString (std::string s)
-{
-	if (s == "0") return NoAttrib{};
-	if (s == "div") return MulOpType::div;
-	if (s == "mod") return MulOpType::mod;
-	if (s == "and") return MulOpType::t_and;
-	if (s == "or") return AddOpType::t_or;
-	if (s == "integer") return StandardType::integer;
-	if (s == "real") return StandardType::real;
+std::optional<ReservedWord> GetReservedWord(std::string s) {
+	if (s == "program") return ReservedWord(s, TokenType::PROGRAM, NoAttrib{});
+	if (s == "var") return ReservedWord(s, TokenType::VARIABLE, NoAttrib{});
+	if (s == "array") return ReservedWord(s, TokenType::ARRAY, NoAttrib{});
+	if (s == "of") return ReservedWord(s, TokenType::OF, NoAttrib{});
+	if (s == "integer") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardEnum::integer);
+	if (s == "real") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardEnum::real);
+	if (s == "function") return ReservedWord(s, TokenType::FUNCTION, NoAttrib{});
+	if (s == "procedure") return ReservedWord(s, TokenType::PROCEDURE, NoAttrib{});
+	if (s == "begin") return ReservedWord(s, TokenType::BEGIN, NoAttrib{});
+	if (s == "end") return ReservedWord(s, TokenType::END, NoAttrib{});
+	if (s == "if") return ReservedWord(s, TokenType::IF, NoAttrib{});
+	if (s == "then") return ReservedWord(s, TokenType::THEN, NoAttrib{});
+	if (s == "else") return ReservedWord(s, TokenType::ELSE, NoAttrib{});
+	if (s == "while") return ReservedWord(s, TokenType::WHILE, NoAttrib{});
+	if (s == "do") return ReservedWord(s, TokenType::DO, NoAttrib{});
+	if (s == "not") return ReservedWord(s, TokenType::NOT, NoAttrib{});
+	if (s == "or") return ReservedWord (s, TokenType::ADDOP, AddOpEnum::t_or);
+	if (s == "and") return ReservedWord (s, TokenType::MULOP, MulOpEnum::t_and);
+	if (s == "div") return ReservedWord (s, TokenType::MULOP, MulOpEnum::div);
+	if (s == "mod") return ReservedWord (s, TokenType::MULOP, MulOpEnum::mod);
 	return {};
 }
 
@@ -39,29 +28,28 @@ ReservedWordList ReadReservedWordsFile ()
 {
 	ReservedWordList res_words;
 
-	std::ifstream reserved_word_file (std::string ("reserved_words.txt"));
+	std::ifstream reserved_word_file (std::string ("test_input/reserved_words.txt"));
 
 	if (reserved_word_file)
 	{
 
 		while (reserved_word_file.good ())
 		{
-			std::string word, type_s, attrib_s;
-			reserved_word_file >> word >> type_s >> attrib_s;
-			auto type = ReadTokenTypeFromString (type_s);
-			auto attrib = ReadTokenAttributeFromString (attrib_s);
-			if (type.has_value () && attrib.has_value ())
-				res_words.emplace (word, type.value (), attrib.value ());
+			std::string word;
+			reserved_word_file >> word;
+			auto res_word = GetReservedWord (word);
+			if (res_word.has_value ())
+				res_words.insert (res_word.value ());
 			else
 				fmt::print ("Reserved word not found! {}\n", word);
 		}
 
 		fmt::print ("Res Word size = {}\n", res_words.size ());
 		fmt::print ("Reserved Words:\n");
-		// for(auto& item : res_words){
-		//    fmt::print("Word: {} \t {}\n", item.word,
-		//    static_cast<int>(item.type));
-		//}
+		 for(auto& item : res_words){
+		    fmt::print("Word: {} \t {}\n", item.word,
+		    enumToString(item.type));
+		}
 	}
 	else
 	{
@@ -106,23 +94,21 @@ void Lexer::AddMachine (LexerMachine &&machine)
 	           [](LexerMachine a, LexerMachine b) { return a.precedence > b.precedence; });
 }
 
-void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::ReturnVariant content)
+void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::OptionalToken content)
 {
-	if (content.index () == 1)
-	{
-		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14}{:<14}{:<14}\n", line_num, lexeme,
-		            enumToString (std::get<1> (content).type),
-		            std::get<1> (content).attrib.index (), std::get<1> (content).attrib);
-	}
-	else if (content.index () == 2)
-	{
-		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14} ({} {})\n", line_num, lexeme, "99 (LEXERR)",
-		            enumToString (std::get<2> (content).type), enumToString (std::get<2> (content).subType));
+	if (content.has_value()) {
+		fmt::print (token_file.FP (), "{:^14}{:<14} {:<4}{:<10}{:<4}{:<4}\n", line_num, lexeme,
+		            static_cast<int>(content->type), enumToString ((content)->type),
+		            (content)->attrib.index (), (content)->attrib);
+		if ((content)->attrib.index() == 9) //lexer error
+		{ 
+		    fmt::print (listing_file.FP (), "LEXERR:\t{}\n", *content);
+		} 
 	}
 	else
 	{
-		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14}{:<14} (Unrecog Symbol)\n", line_num,
-		            lexeme, "99 (LEXERR)", "1");
+	    fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
+	  	            lexeme, "99 (LEXERR)", "1");
 	}
 }
 
@@ -160,25 +146,16 @@ std::vector<TokenInfo> Lexer::GetTokens (std::vector<std::string> lines)
 				{
 
 					backward_index += machine_ret->chars_to_eat;
-					if (machine_ret->content.index () != 0)
+					if (machine_ret->content.has_value ())
 					{
 						TokenFilePrinter (cur_line_number,
 						                  Str_ProgramLine (Sub_ProgramLine (buffer, machine_ret->chars_to_eat)),
 						                  machine_ret->content);
-					}
-					if (machine_ret->content.index () == 1)
-					{
-						std::get<1> ((machine_ret->content)).line_location = cur_line_number;
-						std::get<1> ((machine_ret->content)).column_location = backward_index;
 
-						tokens.push_back (std::get<1> ((machine_ret->content)));
-					}
-					else if (machine_ret->content.index () == 2)
-					{
-						std::get<2> ((machine_ret->content)).line_location = cur_line_number;
-						std::get<2> ((machine_ret->content)).column_location = backward_index;
+						machine_ret->content->line_location = cur_line_number;
+						machine_ret->content->column_location = backward_index;
 
-						fmt::print (listing_file.FP (), "LEXERR:\t{}\n", std::get<2> ((machine_ret->content)));
+						tokens.push_back (*machine_ret->content);					
 					}
 				}
 			}
@@ -246,10 +223,10 @@ void Lexer::CreateMachines ()
 				 { return LexerMachineReturn (index, res_word.value ()); }
 				 int loc = symbolTable.AddSymbol (Str_ProgramLine (Sub_ProgramLine (line, index)));
 
-				 return LexerMachineReturn (index, TokenInfo (TokenType::id, SymbolType (loc)));
+				 return LexerMachineReturn (index, TokenInfo (TokenType::ID, SymbolType (loc)));
 			 }
-			 return LexerMachineReturn (index, LexerError (LexerErrorType::Id, LexerErrorSubType::TooLong,
-			                                               Sub_ProgramLine (line, index)));
+			 return LexerMachineReturn (index, TokenInfo (TokenType::LEXERR, LexerError(LexerErrorEnum::Id_TooLong,
+			                                               Sub_ProgramLine (line, index))));
 		 }
 
 		 return {};
@@ -260,34 +237,34 @@ void Lexer::CreateMachines ()
 		 if (line.size () >= 2)
 		 {
 			 if (line[0] == ':' && line[1] == '=')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::assignop, NoAttrib ()));
+				 return LexerMachineReturn (2, TokenInfo (TokenType::ASSIGNOP, NoAttrib ()));
 			 if (line[0] == '.' && line[1] == '.')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::dot_dot, NoAttrib ()));
+				 return LexerMachineReturn (2, TokenInfo (TokenType::DOT_DOT, NoAttrib ()));
 		 }
 		 if (line.size () >= 1)
 		 {
 			 if (line[0] == '\0')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::eof, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::END_FILE, NoAttrib ()));
 			 if (line[0] == '(')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::paren_open, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::PAREN_OPEN, NoAttrib ()));
 			 if (line[0] == ')')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::paren_close, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::PAREN_CLOSE, NoAttrib ()));
 			 if (line[0] == ';')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::semicolon, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::SEMICOLON, NoAttrib ()));
 			 if (line[0] == '.')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::dot, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::DOT, NoAttrib ()));
 			 if (line[0] == ',')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::comma, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::COMMA, NoAttrib ()));
 			 if (line[0] == ':')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::colon, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::COLON, NoAttrib ()));
 			 if (line[0] == '[')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::bracket_open, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::BRACKET_OPEN, NoAttrib ()));
 			 if (line[0] == ']')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::bracket_close, NoAttrib ()));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::BRACKET_CLOSE, NoAttrib ()));
 			 if (line[0] == '+')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::sign, SignOpType::plus));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::plus));
 			 if (line[0] == '-')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::sign, SignOpType::minus));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::minus));
 		 }
 		 return {};
 	 } });
@@ -333,12 +310,13 @@ void Lexer::CreateMachines ()
 					 catch (std::out_of_range& e) {
 					 
 					 }
-					 return LexerMachineReturn (i, TokenInfo (TokenType::real, FloatType (val)));
+					 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
 				 }
 				 else
 				 {
-					 return LexerMachineReturn (i, LexerError (LexerErrorType::LReal, LexerErrorSubType::TooLong,
-					                                           Sub_ProgramLine (line, i)));
+					 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+					                                          LexerError (LexerErrorEnum::LReal1_TooLong,
+					                                                      Sub_ProgramLine (line, i))));
 				 }
 			 }
 			 else
@@ -357,12 +335,13 @@ void Lexer::CreateMachines ()
 					 catch (std::out_of_range &e)
 					 {
 					 } 
-				     return LexerMachineReturn (i, TokenInfo (TokenType::real, FloatType (val)));
+				     return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
 				 }
 				 else
 				 {
-					 return LexerMachineReturn (i, LexerError (LexerErrorType::SReal, LexerErrorSubType::TooLong,
-					                                           Sub_ProgramLine (line, i)));
+					 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+					                                              LexerError (LexerErrorEnum::SReal1_TooLong,
+					                                                          Sub_ProgramLine (line, i))));
 				 }
 			 }
 		 }
@@ -388,28 +367,30 @@ void Lexer::CreateMachines ()
 				 {
 					 if (i > 1 && line[0] == '0')
 					 {
-						 return LexerMachineReturn (i, LexerError (LexerErrorType::Int,
-						                                           LexerErrorSubType::LeadingZero, seq));
+						 return LexerMachineReturn (i,
+						                            TokenInfo (TokenType::LEXERR,
+						                                          LexerError (LexerErrorEnum::Int_LeadingZero, seq)));
 					 }
 					 else
 					 {
-						 return LexerMachineReturn (i, TokenInfo (TokenType::integer, IntType (val)));
+						 return LexerMachineReturn (i, TokenInfo (TokenType::INTEGER, IntType (val)));
 					 }
 				 }
 				 else
 				 {
-					 return LexerMachineReturn (i, LexerError (LexerErrorType::Int,
-					                                           LexerErrorSubType::TooLong, seq));
+					 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+					                                          LexerError (LexerErrorEnum::Int_TooLong, seq)));
 				 }
 			 }
 			 catch (std::out_of_range e)
 			 {
-				 return LexerMachineReturn (i, LexerError (LexerErrorType::Int, LexerErrorSubType::TooLong, seq));
+				 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+				                                          LexerError (LexerErrorEnum::Int_TooLong, seq)));
 			 }
 			 catch (std::invalid_argument e)
 			 {
-				 return LexerMachineReturn (i, LexerError (LexerErrorType::Int,
-				                                           LexerErrorSubType::InvalidNumericLiteral, seq));
+				 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Int_InvalidNumericLiteral,
+				                                                                         seq)));
 			 }
 		 }
 		 return {};
@@ -420,18 +401,18 @@ void Lexer::CreateMachines ()
 		 if (line.size () >= 2)
 		 {
 			 if (line[0] == '>' && line[1] == '=')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::relop, RelOpType::greater_than_or_equal));
+				 return LexerMachineReturn (2, TokenInfo (TokenType::RELOP, RelOpEnum::greater_than_or_equal));
 			 if (line[0] == '<' && line[1] == '=')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::relop, RelOpType::less_than_or_equal));
+				 return LexerMachineReturn (2, TokenInfo (TokenType::RELOP, RelOpEnum::less_than_or_equal));
 			 if (line[0] == '<' && line[1] == '>')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::relop, RelOpType::not_equal));
+				 return LexerMachineReturn (2, TokenInfo (TokenType::RELOP, RelOpEnum::not_equal));
 		 }
 		 if (line[0] == '>')
-			 return LexerMachineReturn (1, TokenInfo (TokenType::relop, RelOpType::greater_than));
+			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::greater_than));
 		 if (line[0] == '<')
-			 return LexerMachineReturn (1, TokenInfo (TokenType::relop, RelOpType::less_than));
+			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::less_than));
 		 if (line[0] == '=')
-			 return LexerMachineReturn (1, TokenInfo (TokenType::relop, RelOpType::equal));
+			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::equal));
 		 return {};
 	 } });
 }

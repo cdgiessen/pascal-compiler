@@ -1,20 +1,20 @@
-program program 0
-var variable 0
-array array 0
-of of 0
-integer integer integer
-real real real
-function function 0
-procedure procedure 0
-begin begin 0
-end end 0
-if t_if 0
-then t_then 0
-else t_else 0
-while t_while 0
-do t_do 0
-not not 0
-or addop or
-div mulop div
-mod mulop mod
-and mulop and
+program
+var
+array
+of
+integer
+real
+function
+procedure
+begin
+end
+if
+then
+else
+while
+do
+not
+or
+div
+mod
+and

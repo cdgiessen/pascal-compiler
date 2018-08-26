@@ -34,67 +34,79 @@ class AST_root
 {
 };
 
+using ProgramLine = std::vector<char>;
+
+std::ostream &operator<< (std::ostream &os, const ProgramLine &t)
+{
+	for (auto &c : t)
+		os << c;
+	return os;
+}
+
 enum class TokenType
 {
 
-	program,
-	id,
-	standard_type,
-	integer,
-	real,
-	function,
-	procedure,
-	assignop,
-	variable,
-	array,
-	relop,
-	simple_expression,
-	addop,
-	term,
-	mulop,
-	factor,
-	sign,
-	begin,
-	end,
-	t_not,
-	of,
-	t_if,
-	t_then,
-	t_else,
-	t_while,
-	t_do,
-	paren_open,
-	paren_close,
-	semicolon,
-	dot,
-	comma,
-	colon,
-	bracket_open,
-	bracket_close,
-	dot_dot,
-	eof,
+	PROGRAM,
+	ID,
+	STANDARD_TYPE,
+	INTEGER,
+	REAL,
+	FUNCTION,
+	PROCEDURE,
+	ASSIGNOP,
+	VARIABLE,
+	ARRAY,
+	RELOP,
+	SIMPLE_EXPRESSION,
+	ADDOP,
+	TERM,
+	MULOP,
+	FACTOR,
+	SIGN,
+	BEGIN,
+	END,
+	NOT,
+	OF,
+	IF,
+	THEN,
+	ELSE,
+	WHILE,
+	DO,
+	PAREN_OPEN,
+	PAREN_CLOSE,
+	SEMICOLON,
+	DOT,
+	COMMA,
+	COLON,
+	BRACKET_OPEN,
+	BRACKET_CLOSE,
+	DOT_DOT,
+	END_FILE,
+	LEXERR,
 };
 
-template <> char const *enumStrings<TokenType>::data[] = {
-	"(PROG)",   "(ID)",     "(STD_TYPE)", "(INT)",      "(REAL)",  "(FUNC)", "(PROC)",  "(ASSIGN)",
-	"(VAR)",    "(ARRAY)",  "(RELOP)",    "(SIMP_EXP)", "(ADDOP)", "(TERM)", "(MULOP)", "(FACT)",
-	"(SIGN)",   "(BEGIN)",  "(END)",      "(NOT)",      "(OF)",    "(IF)",   "(THEN)",  "(ELSE)",
-	"(WHILE)",  "(DO)",     "(PAREN_O)",  "(PAREN_C)",  "(SEMIC)", "(DOT)",  "(COMMA)", "(COLON)",
-	"(BRKT_O)", "(BRKT_C)", "(DOT_DOT)",  "(EOF)",
-};
+template <>
+char const *enumStrings<TokenType>::data[] = { "PROG",  "ID",       "STD_TYPE", "INT",    "REAL",
+	                                           "FUNC",  "PROC",     "ASSIGN",   "VAR",    "ARRAY",
+	                                           "RELOP", "SIMP_EXP", "ADDOP",    "TERM",   "MULOP",
+	                                           "FACT",  "SIGN",     "BEGIN",    "END",    "NOT",
+	                                           "OF",    "IF",       "THEN",     "ELSE",   "WHILE",
+	                                           "DO",    "PAREN_O",  "PAREN_C",  "SEMIC",  "DOT",
+	                                           "COMMA", "COLON",    "BRKT_O",   "BRKT_C", "DOT_DOT",
+	                                           "EOF",   "LEXERR" };
 
 struct NoAttrib
 {
 	friend std::ostream &operator<< (std::ostream &os, const NoAttrib &t) { return os << "(NULL)"; }
 };
 
-enum class StandardType
+enum class StandardEnum
 {
 	integer,
 	real
 };
 
-template <> char const *enumStrings<StandardType>::data[] = { "INT", "REAL" };
+template <> char const *enumStrings<StandardEnum>::data[] = { "INT", "REAL" };
 
 struct IntType
 {
@@ -129,15 +141,15 @@ struct SymbolType
 	}
 };
 
-enum class AddOpType
+enum class AddOpEnum
 {
 	plus,  //+
 	minus, //-
 	t_or   // or
 };
-template <> char const *enumStrings<AddOpType>::data[] = { "PLUS", "MINUS", "OR" };
+template <> char const *enumStrings<AddOpEnum>::data[] = { "PLUS", "MINUS", "OR" };
 
-enum class MulOpType
+enum class MulOpEnum
 {
 	mul,  //*
 	div,  // div or /
@@ -145,17 +157,17 @@ enum class MulOpType
 	t_and // and
 };
 
-template <> char const *enumStrings<MulOpType>::data[] = { "MUL", "DIV", "MOD", "AND" };
+template <> char const *enumStrings<MulOpEnum>::data[] = { "MUL", "DIV", "MOD", "AND" };
 
-enum class SignOpType
+enum class SignOpEnum
 {
 	plus, //+
 	minus //-
 };
 
-template <> char const *enumStrings<SignOpType>::data[] = {	"PLUS",	"MINUS"};
+template <> char const *enumStrings<SignOpEnum>::data[] = { "PLUS", "MINUS" };
 
-enum class RelOpType
+enum class RelOpEnum
 {
 	equal,                //=
 	not_equal,            //<>
@@ -165,22 +177,72 @@ enum class RelOpType
 	greater_than_or_equal //>=
 };
 
-template <> char const *enumStrings<RelOpType>::data[] = { "EQ", "NEQ", "LT", "LEQ", "GT", "GEQ" };
+template <> char const *enumStrings<RelOpEnum>::data[] = { "EQ", "NEQ", "LT", "LEQ", "GT", "GEQ" };
+
+enum class LexerErrorEnum
+{
+	Id_TooLong,
+	Int_InvalidNumericLiteral,
+	Int_TooLong,
+	Int_LeadingZero,
+	SReal_InvalidNumericLiteral,
+	SReal1_TooLong,
+	SReal2_TooLong,
+	SReal1_LeadingZero,
+	LReal_InvalidNumericLiteral,
+	LReal1_LeadingZero,
+	LReal1_TooLong,
+	LReal2_TooLong,
+	LReal3_TooLong,
+};
+
+template <>
+char const *enumStrings<LexerErrorEnum>::data[] = {
+	"Id_TooLong",
+	"Int_InvalidNumericLiteral",
+	"Int_TooLong",
+	"Int_LeadingZero",
+	"SReal_InvalidNumericLiteral",
+	"SReal1_TooLong",
+	"SReal2_TooLong",
+	"SReal1_LeadingZero",
+	"LReal_InvalidNumericLiteral",
+	"LReal1_LeadingZero",
+	"LReal1_TooLong",
+	"LReal2_TooLong",
+	"LReal3_TooLong",
+};
+
+std::string Str_ProgramLine (const ProgramLine &line);
+ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy);
+
+struct LexerError
+{
+	LexerErrorEnum type;
+	ProgramLine errorData;
+	LexerError (LexerErrorEnum type, ProgramLine errorData) : type (type), errorData (errorData) {}
+
+	friend std::ostream &operator<< (std::ostream &os, const LexerError &t)
+	{
+		return os << enumToString(t.type) << " " << Str_ProgramLine(t.errorData);
+	}
+};
 
 using TokenAttribute =
-std::variant<NoAttrib, StandardType, AddOpType, MulOpType, SignOpType, RelOpType, IntType, FloatType, SymbolType>;
+std::variant<NoAttrib, StandardEnum, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, IntType, FloatType, SymbolType, LexerError>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 {
 	if (t.index () == 0) return os << std::get<0> (t);
-	if (t.index () == 1) return os << enumToString(std::get<1> (t));
-	if (t.index () == 2) return os << enumToString(std::get<2> (t));
-	if (t.index () == 3) return os << enumToString(std::get<3> (t));
-	if (t.index () == 4) return os << enumToString(std::get<4> (t));
-	if (t.index () == 5) return os << enumToString(std::get<5> (t));
+	if (t.index () == 1) return os << enumToString (std::get<1> (t));
+	if (t.index () == 2) return os << enumToString (std::get<2> (t));
+	if (t.index () == 3) return os << enumToString (std::get<3> (t));
+	if (t.index () == 4) return os << enumToString (std::get<4> (t));
+	if (t.index () == 5) return os << enumToString (std::get<5> (t));
 	if (t.index () == 6) return os << std::get<6> (t);
 	if (t.index () == 7) return os << std::get<7> (t);
 	if (t.index () == 8) return os << std::get<8> (t);
+	if (t.index () == 9) return os << std::get<9> (t);
 }
 
 struct TokenInfo
@@ -276,73 +338,17 @@ class SymbolTable
 	std::vector<std::string> symbols;
 };
 
-enum class LexerErrorType
-{
-	Id,
-	Int,
-	SReal,
-	LReal,
-};
-template <> char const *enumStrings<LexerErrorType>::data[] = { "id", "int", "sreal", "lreal" };
-
-enum class LexerErrorSubType
-{
-	TooLong,
-	ZeroLength,
-	LeadingZero,
-	TrailingZero,
-	InvalidNumericLiteral,
-};
-template <>
-char const *enumStrings<LexerErrorSubType>::data[] = { "TooLong", "ZeroLength", "LeadingZero", "TrailingZero","InvalidNumericLiteral" };
-
-using ProgramLine = std::vector<char>;
-
-std::ostream &operator<< (std::ostream &os, const ProgramLine &t)
-{
-	for (auto &c : t)
-		os << c;
-	return os;
-}
-
-struct LexerError
-{
-	LexerErrorType type;
-	LexerErrorSubType subType;
-	ProgramLine errorData;
-	int line_location = -1;
-	int column_location = -1;
-
-	LexerError (LexerErrorType type, LexerErrorSubType subType, ProgramLine errorData)
-	: type (type), subType (subType), errorData (errorData)
-	{
-	}
-
-	LexerError (LexerErrorType type, LexerErrorSubType subType, int line, int column)
-	: type (type), subType (subType), line_location (line), column_location (column)
-	{
-	}
-
-	friend std::ostream &operator<< (std::ostream &os, const LexerError &t)
-	{
-		return os << enumToString (t.type) << '\t' << enumToString(t.subType) << '\t' << t.errorData;
-	}
-};
-
 struct LexerMachineReturn
 {
-	int chars_to_eat = 0;
-	using ReturnVariant = std::variant<std::monostate, TokenInfo, LexerError>;
+	using OptionalToken = std::optional<TokenInfo>;
 
-	ReturnVariant content;
+	int chars_to_eat = 0;
+	OptionalToken content;
 
 	LexerMachineReturn (int chars_to_eat) : chars_to_eat (chars_to_eat){};
+
 	LexerMachineReturn (int chars_to_eat, TokenInfo token)
 	: chars_to_eat (chars_to_eat), content (token)
-	{
-	}
-	LexerMachineReturn (int chars_to_eat, LexerError error)
-	: chars_to_eat (chars_to_eat), content (error)
 	{
 	}
 };
@@ -376,7 +382,7 @@ class Lexer
 
 	std::vector<TokenInfo> GetTokens (std::vector<std::string> lines);
 
-	void TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::ReturnVariant content);
+	void TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::OptionalToken content);
 
 	private:
 	std::vector<LexerMachine> machines;
