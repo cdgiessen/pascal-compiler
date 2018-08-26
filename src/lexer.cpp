@@ -179,7 +179,8 @@ struct SymbolType
     int loc = -1;
     SymbolType(int loc): loc(loc) {}
 
-    friend std::ostream &operator<< (std::ostream &os, const SymbolType &t) { return os << t.loc << "(ptr in symbol table)"; }
+    friend std::ostream &operator<< (std::ostream &os, const SymbolType &t) 
+        { return os << t.loc << "(ptr in symbol table)"; }
 };
 
 enum class AddOpType
@@ -449,6 +450,7 @@ enum class LexerErrorSubType
 	ZeroLength,
 	LeadingZero,
 	TrailingZero,
+    InvalidNumericLiteral,
 };
 
 std::ostream &operator<< (std::ostream &os, LexerErrorSubType t)
@@ -456,6 +458,7 @@ std::ostream &operator<< (std::ostream &os, LexerErrorSubType t)
 	if (t == LexerErrorSubType::TooLong) return os << "Too Long";
 	if (t == LexerErrorSubType::ZeroLength) return os << "Zero Length";
 	if (t == LexerErrorSubType::TrailingZero) return os << "Trailing Zero";
+    if (t == LexerErrorSubType::InvalidNumericLiteral) return os << "InvalidNumericLiteral";
 	return os << "Leading Zero"; // guaranteed return value, no bad paths
 }
 
@@ -586,7 +589,7 @@ void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineRetu
 	}
 	else if (content.index () == 2)
 	{
-		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14}{:<14} ({} {})\n", line_num, lexeme,
+		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14} ({} {})\n", line_num, lexeme,
 		            "99 (LEXERR)", std::get<2> (content).type, std::get<2> (content).subType);
 	}
 	else
@@ -817,10 +820,30 @@ void Lexer::CreateMachines ()
 					 while (i < line.size() && std::isdigit(line[i])) {
 			             i++;
 					 }
-		             if (i > 0)
-			             return LexerMachineReturn (i, TokenInfo (TokenType::integer, IntType (
-                             std::stoi(Str_ProgramLine(Sub_ProgramLine(line, i)))
-                         )));
+		             if (i > 0){
+                         auto seq = Sub_ProgramLine(line, i);
+                         int val = 0;
+                         try{
+                             int val = std::stoi(Str_ProgramLine(seq));
+
+                            if(i < integer_digit_length) {
+                                if( i > 1 && line[0] == '0'){
+                                   return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::LeadingZero, seq));    
+                                } else {
+			                       return LexerMachineReturn (i, TokenInfo (TokenType::integer, 
+                                       IntType (val)));
+                                }
+                            } else {
+                                return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::TooLong, seq));
+                            }
+                         }
+                         catch (std::out_of_range e) {
+                             return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::TooLong, seq));
+                         }
+                         catch (std::invalid_argument e) {
+                             return LexerMachineReturn(i, LexerError(LexerErrorType::Int, LexerErrorSubType::InvalidNumericLiteral, seq));
+                         }
+                     }
 		             return {};
 	             } });
 
@@ -849,17 +872,20 @@ int main (int argc, char *argv[])
 {
 	auto reserved_words = ReadReservedWordsFile ();
 
-	std::string inFileName = "test_pascal.txt";
+    std::vector<std::string> file_list;
+    file_list.push_back("test_input/test_passing.txt");
+    //file_list.push_back("test_input/test_error.txt");
 
-	if (argc == 2) { inFileName = std::string (argv[1]); }
+	//if (argc == 2) { inFileName = std::string (argv[1]); }
 
 	Lexer lexer;
 	lexer.LoadReservedWords (reserved_words);
 
+
 	try
 	{
 
-		std::fstream inFile (inFileName, std::ios::in);
+		std::fstream inFile (file_list.at(0), std::ios::in);
 		if (inFile)
 		{
 			std::vector<std::string> lines;

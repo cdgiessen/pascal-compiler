@@ -16,5 +16,9 @@ target_link_libraries(lexer PUBLIC fmt)
 add_custom_command(
         TARGET lexer POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_SOURCE_DIR}/reserved_words.txt
-                ${CMAKE_CURRENT_BINARY_DIR}/reserved_words.txt)
+                ${CMAKE_SOURCE_DIR}/test_input
+                ${CMAKE_CURRENT_BINARY_DIR}/test_input)
+
+add_custom_command(TARGET lexer POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+		${PROJECT_SOURCE_DIR}/test_input $<TARGET_FILE_DIR:lexer>/test_input)

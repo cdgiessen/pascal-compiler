@@ -1,0 +1,32 @@
+program example(input, output);
+var x, y: integer;
+function gcd(a, b: integer): integer;
+begin
+	if b = 0 then gcd := a
+	else gcd := gcd(b, a mod b)
+end;
+
+begin
+	x := 12345;
+	x := 1234567890;
+	x := 12345678901;
+	x := 123456789012345;
+	x := 012345;
+	x := 12345;
+
+	y := 1.1;
+	y := 111111.2;
+	y := 1.222222;
+
+	z := 1.2E3;
+	z := 111111.2E3;
+	z := 1.222222E3;
+	z := 1.2E333;
+	z := 1E3;
+	z := .2;
+ 	z := 2.;
+
+	read(x,y);
+	write(gcd(x,y))
+end
+.
