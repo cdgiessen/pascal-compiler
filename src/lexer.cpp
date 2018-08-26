@@ -75,7 +75,8 @@ enum class TokenType
 	eof,
 };
 
-template <> char const *enumStrings<TokenType>::data[] = {
+template <>
+char const *enumStrings<TokenType>::data[] = {
 	"(PROG)",   "(ID)",     "(STD_TYPE)", "(INT)",      "(REAL)",  "(FUNC)", "(PROC)",  "(ASSIGN)",
 	"(VAR)",    "(ARRAY)",  "(RELOP)",    "(SIMP_EXP)", "(ADDOP)", "(TERM)", "(MULOP)", "(FACT)",
 	"(SIGN)",   "(BEGIN)",  "(END)",      "(NOT)",      "(OF)",    "(IF)",   "(THEN)",  "(ELSE)",
@@ -153,7 +154,7 @@ enum class SignOpType
 	minus //-
 };
 
-template <> char const *enumStrings<SignOpType>::data[] = {	"PLUS",	"MINUS"};
+template <> char const *enumStrings<SignOpType>::data[] = { "PLUS", "MINUS" };
 
 enum class RelOpType
 {
@@ -173,11 +174,11 @@ std::variant<NoAttrib, StandardType, AddOpType, MulOpType, SignOpType, RelOpType
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 {
 	if (t.index () == 0) return os << std::get<0> (t);
-	if (t.index () == 1) return os << enumToString(std::get<1> (t));
-	if (t.index () == 2) return os << enumToString(std::get<2> (t));
-	if (t.index () == 3) return os << enumToString(std::get<3> (t));
-	if (t.index () == 4) return os << enumToString(std::get<4> (t));
-	if (t.index () == 5) return os << enumToString(std::get<5> (t));
+	if (t.index () == 1) return os << enumToString (std::get<1> (t));
+	if (t.index () == 2) return os << enumToString (std::get<2> (t));
+	if (t.index () == 3) return os << enumToString (std::get<3> (t));
+	if (t.index () == 4) return os << enumToString (std::get<4> (t));
+	if (t.index () == 5) return os << enumToString (std::get<5> (t));
 	if (t.index () == 6) return os << std::get<6> (t);
 	if (t.index () == 7) return os << std::get<7> (t);
 	if (t.index () == 8) return os << std::get<8> (t);
@@ -362,7 +363,8 @@ enum class LexerErrorType
 	SReal,
 	LReal,
 };
-template <> char const *enumStrings<enum class LexerErrorType>::data[] = { "id", "int", "sreal", "lreal" };
+template <>
+char const *enumStrings<enum class LexerErrorType>::data[] = { "id", "int", "sreal", "lreal" };
 
 enum class LexerErrorSubType
 {
@@ -373,7 +375,8 @@ enum class LexerErrorSubType
 	InvalidNumericLiteral,
 };
 template <>
-char const *enumStrings<enum class LexerErrorSubType>::data[] = { "TooLong", "ZeroLength", "LeadingZero", "TrailingZero","InvalidNumericLiteral" };
+char const *enumStrings<enum class LexerErrorSubType>::data[] = { "TooLong", "ZeroLength", "LeadingZero",
+	                                                              "TrailingZero", "InvalidNumericLiteral" };
 
 using ProgramLine = std::vector<char>;
 
@@ -424,7 +427,7 @@ struct LexerError
 
 	friend std::ostream &operator<< (std::ostream &os, const LexerError &t)
 	{
-		return os << enumToString (t.type) << '\t' << enumToString(t.subType) << '\t' << t.errorData;
+		return os << enumToString (t.type) << '\t' << enumToString (t.subType) << '\t' << t.errorData;
 	}
 };
 
@@ -497,13 +500,13 @@ void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineRetu
 	if (content.index () == 1)
 	{
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14}{:<14}{:<14}\n", line_num, lexeme,
-		            enumToString(std::get<1> (content).type), std::get<1> (content).attrib.index (),
-		            std::get<1> (content).attrib);
+		            enumToString (std::get<1> (content).type),
+		            std::get<1> (content).attrib.index (), std::get<1> (content).attrib);
 	}
 	else if (content.index () == 2)
 	{
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<14} ({} {})\n", line_num, lexeme, "99 (LEXERR)",
-		            enumToString (std::get<2> (content).type),  enumToString (std::get<2> (content).subType));
+		            enumToString (std::get<2> (content).type), enumToString (std::get<2> (content).subType));
 	}
 	else
 	{
@@ -596,7 +599,7 @@ void Lexer::CreateMachines ()
 			             {
 				             isInComment = false;
 				             i++;
-				             //if (i > line.size ()) i = line.size () - 1; // overflow?
+				             // if (i > line.size ()) i = line.size () - 1; // overflow?
 			             }
 			             return LexerMachineReturn (i);
 		             }
@@ -706,7 +709,22 @@ void Lexer::CreateMachines ()
 					 pow_size++;
 				 }
 				 if (base_size < real_base_length && decimal_size < real_decimal_length && pow_size < real_exponent_length)
-				 { return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ())); } else
+				 {
+					 auto sub = Sub_ProgramLine (line, i);
+					 float val;
+					 try
+					 {
+						 val = std::stof (Str_ProgramLine (sub));
+					 }
+					 catch (std::invalid_argument& e)
+					 {
+					 }
+					 catch (std::out_of_range& e) {
+					 
+					 }
+					 return LexerMachineReturn (i, TokenInfo (TokenType::real, FloatType (val)));
+				 }
+				 else
 				 {
 					 return LexerMachineReturn (i, LexerError (LexerErrorType::LReal, LexerErrorSubType::TooLong,
 					                                           Sub_ProgramLine (line, i)));
@@ -715,7 +733,22 @@ void Lexer::CreateMachines ()
 			 else
 			 {
 				 if (base_size < real_base_length && decimal_size < real_decimal_length)
-				 { return LexerMachineReturn (i, TokenInfo (TokenType::real, NoAttrib ())); } else
+				 {
+					 auto sub = Sub_ProgramLine (line, i);
+					 float val;
+					 try
+					 {
+						 val = std::stof (Str_ProgramLine (sub));
+					 }
+					 catch (std::invalid_argument &e)
+					 {
+					 }
+					 catch (std::out_of_range &e)
+					 {
+					 } 
+				     return LexerMachineReturn (i, TokenInfo (TokenType::real, FloatType (val)));
+				 }
+				 else
 				 {
 					 return LexerMachineReturn (i, LexerError (LexerErrorType::SReal, LexerErrorSubType::TooLong,
 					                                           Sub_ProgramLine (line, i)));
@@ -797,7 +830,7 @@ int main (int argc, char *argv[])
 	auto reserved_words = ReadReservedWordsFile ();
 
 	std::vector<std::string> file_list;
-	file_list.push_back ("test_input/test_passing.txt");
+	file_list.push_back ("test_input/test_error.txt");
 	// file_list.push_back("test_input/test_error.txt");
 
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
