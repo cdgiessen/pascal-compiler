@@ -8,7 +8,7 @@ endif(MSVC)
 
 add_subdirectory(fmt)
 
-add_executable(lexer src/lexer.cpp) 
+add_executable(lexer src/lexer.cpp src/parser.cpp) 
 
 target_link_libraries(lexer PUBLIC fmt)
 

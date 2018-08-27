@@ -1,0 +1,8 @@
+List of tasks:
+
+Error Handling in Lexer Float Machine.
+Rework line inputs to have EOF tokens, as string strips them out currently
+Create program that tests all possible errors, as well as a non error-full program
+
+
+Write report on project 1 (tokenizer)
