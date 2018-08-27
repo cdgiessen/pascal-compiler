@@ -1,7 +1,8 @@
 List of tasks:
 
 Error Handling in Lexer Float Machine.
-Rework line inputs to have EOF tokens, as string strips them out currently
+/* Rework line inputs to have EOF tokens, as string strips them out currently
+ * Currently adds an EOF at the end of a file, doesn't read it from a string.
 Create program that tests all possible errors, as well as a non error-full program
 
 

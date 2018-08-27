@@ -5,7 +5,14 @@ begin
 	if b = 0 then gcd := a
 	else gcd := gcd(b, a mod b)
 end;
-
+{comment}
+{multi line comment
+}
+{
+	again
+}
+} {bad comment}
+{ { another bad comment}
 begin
 	x := 12345;
 	x := 1234567890;

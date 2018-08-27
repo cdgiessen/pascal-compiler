@@ -20,6 +20,7 @@ template <> char const *enumStrings<RelOpEnum>::data[] = { "EQ", "NEQ", "LT", "L
 
 template <>
 char const *enumStrings<LexerErrorEnum>::data[] = {
+	"Unrecognized_Symbol",
 	"Id_TooLong",
 	"StrLit_TooLong",
 	"StrLit_StrLit_NotTerminated",
@@ -180,15 +181,17 @@ void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineRetu
 {
 	if (content.has_value ())
 	{
+		if(lexeme[0] == EOF) //EOF doesn't play nice in the output
+			lexeme = "EOF";
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<4}{:<12}{:<4}{:<4}\n", line_num, lexeme,
 		            static_cast<int> (content->type), enumToString ((content)->type),
 		            (content)->attrib.index (), (content)->attrib);
-		if ((content)->attrib.index () == 9) // lexer error
+		if ((content)->attrib.index () == 10) // lexer error
 		{ fmt::print (listing_file.FP (), "LEXERR:\t{}\n", content->attrib); } }
 	else
 	{
-		fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
-		            lexeme, "99 (LEXERR)", "1");
+		//fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
+		//            lexeme, "99 (LEXERR)", "1");
 	}
 }
 
@@ -244,10 +247,17 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 			}
 			else
 			{
-				fmt::print (listing_file.FP (), "LEXERR:\t{}\t{}\n", "Unrecognized Symbol: ", buffer[0]);
+
+				machine_ret = LexerMachineReturn(1, TokenInfo(TokenType::LEXERR, LexerError(LexerErrorEnum::Unrecognized_Symbol, Sub_ProgramLine(buffer, 1))));
+
+				if(buffer[0] == EOF)
+					fmt::print (listing_file.FP (), "LEXERR:\t{}\t\n", "Unrecognized Symbol: EOF");
+				else 
+					fmt::print (listing_file.FP (), "LEXERR:\t{}\t{}\n", "Unrecognized Symbol: ", buffer[0]);
 				std::string s;
 				s.append (1, buffer[0]);
 				TokenFilePrinter (cur_line_number, s, machine_ret->content);
+				tokens.push_back (*machine_ret->content);
 				backward_index++;
 			}
 		}
@@ -287,13 +297,12 @@ void Lexer::CreateMachines ()
 			 {
 				 i++;
 			 }
-			 // fmt::print("{}\n", Str_ProgramLine(Sub_ProgramLine(line, i)));
-			 if (i < line.size () && line[i] == '\'')
+			 i++;//needs to include the extra tick mark
+			 if (i < line.size ())
 			 {
-
 				 std::string s = Str_ProgramLine (Sub_ProgramLine (line, i - 2, 1));
 
-				 if (i <= string_literal_length)
+				 if (i - 2 <= string_literal_length)
 				 {
 					 int loc = context.literalTable.AddSymbol (std::move (s));
 					 return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
@@ -384,6 +393,8 @@ void Lexer::CreateMachines ()
 				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::plus));
 			 if (line[0] == '-')
 				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::minus));
+			if (line[0] == EOF)
+				return LexerMachineReturn (1, TokenInfo (TokenType::END_FILE, NoAttrib{}));
 		 }
 		 return {};
 	 } });
@@ -561,12 +572,14 @@ int main (int argc, char *argv[])
 			{
 				std::string line;
 
-				std::getline (inFile, line);
+				std::getline (inFile, line, '\n');
+			//line.push_back(EOF);
+
 				lines.push_back (line);
-				if (line.size () > 0) {}
 
 				cur_line_number++;
 			}
+			lines.back().push_back(EOF);
 			lexer.GetTokens (reserved_words, lines);
 		}
 		else

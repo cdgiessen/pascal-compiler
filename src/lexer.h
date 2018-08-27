@@ -171,6 +171,7 @@ struct StringLiteral {
 
 enum class LexerErrorEnum
 {
+	Unrecognized_Symbol,
 	Id_TooLong,
     StrLit_TooLong,
     StrLit_NotTerminated,
