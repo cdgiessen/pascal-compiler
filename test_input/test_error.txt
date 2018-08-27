@@ -27,6 +27,13 @@ begin
  	z := 2.;
 
 	read(x,y);
-	write(gcd(x,y))
+	write(gcd(x,y));
+	
+	read('literal');
+	read('literal2');
+	read('too_long_literal');
+	read('nonterminated_literal);
+	read(''');
+
 end
 .

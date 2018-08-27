@@ -23,6 +23,7 @@
 
 constexpr int line_buffer_length = 72;
 constexpr int identifier_length = 10;
+constexpr int string_literal_length = 10;
 constexpr int integer_digit_length = 10;
 
 // xx.yyEzz
@@ -34,6 +35,7 @@ using ProgramLine = std::vector<char>;
 
 std::string Str_ProgramLine (const ProgramLine &line);
 ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy);
+ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy);
 
 
 std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
@@ -77,6 +79,7 @@ enum class TokenType
 	BRACKET_OPEN,
 	BRACKET_CLOSE,
 	DOT_DOT,
+    STR_LIT,
 	END_FILE,
 	LEXERR,
 };
@@ -156,9 +159,21 @@ struct FloatType
 	}
 };
 
+struct StringLiteral {
+    int loc = -1;
+    StringLiteral(int loc): loc(loc) {}
+    
+    friend std::ostream &operator<< (std::ostream &os, const StringLiteral &t)
+	{
+		return os << t.loc << "(index in literal table)";
+	}
+};
+
 enum class LexerErrorEnum
 {
 	Id_TooLong,
+    StrLit_TooLong,
+    StrLit_NotTerminated,
 	Int_InvalidNumericLiteral,
 	Int_TooLong,
 	Int_LeadingZero,
@@ -186,7 +201,8 @@ struct LexerError
 };
 
 using TokenAttribute =
-std::variant<NoAttrib, StandardEnum, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, IntType, FloatType, SymbolType, LexerError>;
+std::variant<NoAttrib, StandardEnum, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, 
+    IntType, FloatType, SymbolType, StringLiteral, LexerError>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
 
@@ -300,9 +316,11 @@ struct LexerMachineReturn
 
 struct LexerContext {
     bool isInComment = false;
+    bool isInLiteral = false;
     ReservedWordList reservedWords;
 
     SymbolTable symbolTable;
+    SymbolTable literalTable;
 
     LexerContext(ReservedWordList reservedWords):reservedWords(reservedWords) {}
 };

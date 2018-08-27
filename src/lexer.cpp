@@ -1,14 +1,12 @@
 #include "lexer.h"
 
 template <>
-char const *enumStrings<TokenType>::data[] = { "PROG",  "ID",       "STD_TYPE", "INT",    "REAL",
-	                                           "FUNC",  "PROC",     "ASSIGN",   "VAR",    "ARRAY",
-	                                           "RELOP", "SIMP_EXP", "ADDOP",    "TERM",   "MULOP",
-	                                           "FACT",  "SIGN",     "BEGIN",    "END",    "NOT",
-	                                           "OF",    "IF",       "THEN",     "ELSE",   "WHILE",
-	                                           "DO",    "PAREN_O",  "PAREN_C",  "SEMIC",  "DOT",
-	                                           "COMMA", "COLON",    "BRKT_O",   "BRKT_C", "DOT_DOT",
-	                                           "EOF",   "LEXERR" };
+char const *enumStrings<TokenType>::data[] =
+{ "PROG",   "ID",     "STD_TYPE", "INT",      "REAL",  "FUNC",  "PROC",  "ASSIGN",
+  "VAR",    "ARRAY",  "RELOP",    "SIMP_EXP", "ADDOP", "TERM",  "MULOP", "FACT",
+  "SIGN",   "BEGIN",  "END",      "NOT",      "OF",    "IF",    "THEN",  "ELSE",
+  "WHILE",  "DO",     "PAREN_O",  "PAREN_C",  "SEMIC", "DOT",   "COMMA", "COLON",
+  "BRKT_O", "BRKT_C", "DOT_DOT",  "STR_LIT",  "EOF",   "LEXERR" };
 
 template <> char const *enumStrings<StandardEnum>::data[] = { "INT", "REAL" };
 
@@ -20,8 +18,11 @@ template <> char const *enumStrings<SignOpEnum>::data[] = { "PLUS", "MINUS" };
 
 template <> char const *enumStrings<RelOpEnum>::data[] = { "EQ", "NEQ", "LT", "LEQ", "GT", "GEQ" };
 
-template <> char const *enumStrings<LexerErrorEnum>::data[] = {
+template <>
+char const *enumStrings<LexerErrorEnum>::data[] = {
 	"Id_TooLong",
+	"StrLit_TooLong",
+	"StrLit_StrLit_NotTerminated",
 	"Int_InvalidNumericLiteral",
 	"Int_TooLong",
 	"Int_LeadingZero",
@@ -48,29 +49,33 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 	if (t.index () == 7) return os << std::get<7> (t);
 	if (t.index () == 8) return os << std::get<8> (t);
 	if (t.index () == 9) return os << std::get<9> (t);
+	if (t.index () == 10) return os << std::get<10> (t);
+	return os << "ATTRIB OSTREAM NOT UPDATED!";
 }
 
-std::optional<ReservedWord> GetReservedWord(std::string s) {
-	if (s == "program") return ReservedWord(s, TokenType::PROGRAM, NoAttrib{});
-	if (s == "var") return ReservedWord(s, TokenType::VARIABLE, NoAttrib{});
-	if (s == "array") return ReservedWord(s, TokenType::ARRAY, NoAttrib{});
-	if (s == "of") return ReservedWord(s, TokenType::OF, NoAttrib{});
+std::optional<ReservedWord> GetReservedWord (std::string s)
+{
+	if (s == "program") return ReservedWord (s, TokenType::PROGRAM, NoAttrib{});
+	if (s == "var") return ReservedWord (s, TokenType::VARIABLE, NoAttrib{});
+	if (s == "array") return ReservedWord (s, TokenType::ARRAY, NoAttrib{});
+	if (s == "of") return ReservedWord (s, TokenType::OF, NoAttrib{});
 	if (s == "integer") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardEnum::integer);
 	if (s == "real") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardEnum::real);
-	if (s == "function") return ReservedWord(s, TokenType::FUNCTION, NoAttrib{});
-	if (s == "procedure") return ReservedWord(s, TokenType::PROCEDURE, NoAttrib{});
-	if (s == "begin") return ReservedWord(s, TokenType::BEGIN, NoAttrib{});
-	if (s == "end") return ReservedWord(s, TokenType::END, NoAttrib{});
-	if (s == "if") return ReservedWord(s, TokenType::IF, NoAttrib{});
-	if (s == "then") return ReservedWord(s, TokenType::THEN, NoAttrib{});
-	if (s == "else") return ReservedWord(s, TokenType::ELSE, NoAttrib{});
-	if (s == "while") return ReservedWord(s, TokenType::WHILE, NoAttrib{});
-	if (s == "do") return ReservedWord(s, TokenType::DO, NoAttrib{});
-	if (s == "not") return ReservedWord(s, TokenType::NOT, NoAttrib{});
+	if (s == "function") return ReservedWord (s, TokenType::FUNCTION, NoAttrib{});
+	if (s == "procedure") return ReservedWord (s, TokenType::PROCEDURE, NoAttrib{});
+	if (s == "begin") return ReservedWord (s, TokenType::BEGIN, NoAttrib{});
+	if (s == "end") return ReservedWord (s, TokenType::END, NoAttrib{});
+	if (s == "if") return ReservedWord (s, TokenType::IF, NoAttrib{});
+	if (s == "then") return ReservedWord (s, TokenType::THEN, NoAttrib{});
+	if (s == "else") return ReservedWord (s, TokenType::ELSE, NoAttrib{});
+	if (s == "while") return ReservedWord (s, TokenType::WHILE, NoAttrib{});
+	if (s == "do") return ReservedWord (s, TokenType::DO, NoAttrib{});
+	if (s == "not") return ReservedWord (s, TokenType::NOT, NoAttrib{});
 	if (s == "or") return ReservedWord (s, TokenType::ADDOP, AddOpEnum::t_or);
 	if (s == "and") return ReservedWord (s, TokenType::MULOP, MulOpEnum::t_and);
 	if (s == "div") return ReservedWord (s, TokenType::MULOP, MulOpEnum::div);
 	if (s == "mod") return ReservedWord (s, TokenType::MULOP, MulOpEnum::mod);
+	// if (s == "read") return ReservedWord(s, TokenType::ID, Symbo)
 	return {};
 }
 
@@ -96,9 +101,9 @@ ReservedWordList ReadReservedWordsFile ()
 
 		fmt::print ("Res Word size = {}\n", res_words.size ());
 		fmt::print ("Reserved Words:\n");
-		 for(auto& item : res_words){
-		    fmt::print("Word: {} \t {}\n", item.word,
-		    enumToString(item.type));
+		for (auto &item : res_words)
+		{
+			fmt::print ("Word: {} \t {}\n", item.word, enumToString (item.type));
 		}
 	}
 	else
@@ -132,8 +137,28 @@ ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy)
 		ProgramLine output (indexesToCopy);
 		std::memcpy (output.data (), line.data (), indexesToCopy);
 		return output;
-    }
+	}
 }
+
+ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy)
+{
+	if (indexesToCopy >= line.size ())
+		return ProgramLine (line);
+	else
+	{
+		if (firstIndex >= line.size ()) { return ProgramLine (); }
+		if (firstIndex + indexesToCopy >= line.size ())
+		{
+			ProgramLine output (line.size () - firstIndex);
+			std::memcpy (output.data (), &line[firstIndex], line.size () - firstIndex);
+			return output;
+		}
+		ProgramLine output (indexesToCopy);
+		std::memcpy (output.data (), &line[firstIndex], indexesToCopy);
+		return output;
+	}
+}
+
 
 std::optional<TokenInfo> CheckReseredWords (ReservedWordList &list, std::string s)
 {
@@ -153,27 +178,25 @@ void Lexer::AddMachine (LexerMachine &&machine)
 
 void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::OptionalToken content)
 {
-	if (content.has_value()) {
+	if (content.has_value ())
+	{
 		fmt::print (token_file.FP (), "{:^14}{:<14}{:<4}{:<12}{:<4}{:<4}\n", line_num, lexeme,
-		            static_cast<int>(content->type), enumToString ((content)->type),
+		            static_cast<int> (content->type), enumToString ((content)->type),
 		            (content)->attrib.index (), (content)->attrib);
-		if ((content)->attrib.index() == 9) //lexer error
-		{ 
-		    fmt::print (listing_file.FP (), "LEXERR:\t{}\n", content->attrib);
-		} 
-	}
+		if ((content)->attrib.index () == 9) // lexer error
+		{ fmt::print (listing_file.FP (), "LEXERR:\t{}\n", content->attrib); } }
 	else
 	{
-	    fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
-	  	            lexeme, "99 (LEXERR)", "1");
+		fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
+		            lexeme, "99 (LEXERR)", "1");
 	}
 }
 
-TokenStream Lexer::GetTokens (ReservedWordList& list, std::vector<std::string> lines)
+TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> lines)
 {
-    LexerContext context(list);
+	LexerContext context (list);
 
-    std::vector<TokenInfo> tokens;
+	std::vector<TokenInfo> tokens;
 
 	int backward_index = 0;
 	int cur_line_number = 0;
@@ -215,7 +238,7 @@ TokenStream Lexer::GetTokens (ReservedWordList& list, std::vector<std::string> l
 						machine_ret->content->line_location = cur_line_number;
 						machine_ret->content->column_location = backward_index;
 
-						tokens.push_back (*machine_ret->content);					
+						tokens.push_back (*machine_ret->content);
 					}
 				}
 			}
@@ -231,12 +254,12 @@ TokenStream Lexer::GetTokens (ReservedWordList& list, std::vector<std::string> l
 		cur_line_number++;
 		backward_index = 0;
 	}
-	return TokenStream(tokens, context.symbolTable);
+	return TokenStream (tokens, context.symbolTable);
 }
 
 void Lexer::CreateMachines ()
 {
-	AddMachine ({ "Comment", 110, [](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	AddMachine ({ "Comment", 110, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             if (line.size () > 0 && line[0] == '{') { context.isInComment = true; }
 		             if (context.isInComment)
 		             {
@@ -254,7 +277,45 @@ void Lexer::CreateMachines ()
 		             return {};
 	             } });
 
-	AddMachine ({ "Whitespace", 100, [](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	AddMachine (
+	{ "String-Literal", 95, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+		 if (line.size () > 0 && line[0] == '\'')
+		 {
+			 int i = 1;
+
+			 while (i < line.size () && line[i] != '\'')
+			 {
+				 i++;
+			 }
+			 // fmt::print("{}\n", Str_ProgramLine(Sub_ProgramLine(line, i)));
+			 if (i < line.size () && line[i] == '\'')
+			 {
+
+				 std::string s = Str_ProgramLine (Sub_ProgramLine (line, i - 2, 1));
+
+				 if (i <= string_literal_length)
+				 {
+					 int loc = context.literalTable.AddSymbol (std::move (s));
+					 return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
+				 }
+				 else
+				 {
+					 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+					                                          LexerError (LexerErrorEnum::StrLit_TooLong,
+					                                                      Sub_ProgramLine (line, i))));
+				 }
+				 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+				                                          LexerError (LexerErrorEnum::StrLit_TooLong,
+				                                                      Sub_ProgramLine (line, i))));
+			 }
+			 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
+			                                          LexerError (LexerErrorEnum::StrLit_NotTerminated,
+			                                                      Sub_ProgramLine (line, i))));
+		 }
+		 return {};
+	 } });
+
+	AddMachine ({ "Whitespace", 100, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             int i = 0;
 		             while (line[i] == ' ' || line[i] == '\t' || line[i] == '\n')
 		             {
@@ -266,34 +327,32 @@ void Lexer::CreateMachines ()
 	             } });
 
 	AddMachine (
-	{ "IdRes", 90, [&](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	{ "IdRes", 90, [&](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 if (line.size () >= 1 && std::isalpha (line[0]))
 		 {
 			 int index = 0;
-
 			 while (index < line.size () && std::isalnum (line[index]))
 			 {
 				 index++;
 			 }
 			 if (index <= identifier_length)
 			 {
-				 auto res_word =
-				 CheckReseredWords (context.reservedWords, Str_ProgramLine (Sub_ProgramLine (line, index)));
+				 auto res_word = CheckReseredWords (context.reservedWords,
+				                                    Str_ProgramLine (Sub_ProgramLine (line, index)));
 				 if (res_word.has_value ())
 				 { return LexerMachineReturn (index, res_word.value ()); }
 				 int loc = context.symbolTable.AddSymbol (Str_ProgramLine (Sub_ProgramLine (line, index)));
-
 				 return LexerMachineReturn (index, TokenInfo (TokenType::ID, SymbolType (loc)));
 			 }
-			 return LexerMachineReturn (index, TokenInfo (TokenType::LEXERR, LexerError(LexerErrorEnum::Id_TooLong,
-			                                               Sub_ProgramLine (line, index))));
+			 return LexerMachineReturn (index, TokenInfo (TokenType::LEXERR,
+			                                              LexerError (LexerErrorEnum::Id_TooLong,
+			                                                          Sub_ProgramLine (line, index))));
 		 }
-
 		 return {};
 	 } });
 
 	AddMachine (
-	{ "Catch-all", 80, [](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	{ "Catch-all", 80, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 if (line.size () >= 2)
 		 {
 			 if (line[0] == ':' && line[1] == '=')
@@ -330,7 +389,7 @@ void Lexer::CreateMachines ()
 	 } });
 
 	AddMachine (
-	{ "Real", 60, [](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	{ "Real", 60, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 int base_size = 0;
 		 int decimal_size = 0;
 		 int pow_size = 0;
@@ -364,11 +423,11 @@ void Lexer::CreateMachines ()
 					 {
 						 val = std::stof (Str_ProgramLine (sub));
 					 }
-					 catch (std::invalid_argument& e)
+					 catch (std::invalid_argument &e)
 					 {
 					 }
-					 catch (std::out_of_range& e) {
-					 
+					 catch (std::out_of_range &e)
+					 {
 					 }
 					 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
 				 }
@@ -394,14 +453,14 @@ void Lexer::CreateMachines ()
 					 }
 					 catch (std::out_of_range &e)
 					 {
-					 } 
-				     return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
+					 }
+					 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
 				 }
 				 else
 				 {
 					 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
-					                                              LexerError (LexerErrorEnum::SReal1_TooLong,
-					                                                          Sub_ProgramLine (line, i))));
+					                                          LexerError (LexerErrorEnum::SReal1_TooLong,
+					                                                      Sub_ProgramLine (line, i))));
 				 }
 			 }
 		 }
@@ -409,7 +468,7 @@ void Lexer::CreateMachines ()
 	 } });
 
 	AddMachine (
-	{ "Integer", 50, [](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	{ "Integer", 50, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 int i = 0;
 		 while (i < line.size () && std::isdigit (line[i]))
 		 {
@@ -427,8 +486,7 @@ void Lexer::CreateMachines ()
 				 {
 					 if (i > 1 && line[0] == '0')
 					 {
-						 return LexerMachineReturn (i,
-						                            TokenInfo (TokenType::LEXERR,
+						 return LexerMachineReturn (i, TokenInfo (TokenType::LEXERR,
 						                                          LexerError (LexerErrorEnum::Int_LeadingZero, seq)));
 					 }
 					 else
@@ -457,7 +515,7 @@ void Lexer::CreateMachines ()
 	 } });
 
 	AddMachine (
-	{ "Relop", 70, [](LexerContext& context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	{ "Relop", 70, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 if (line.size () >= 2)
 		 {
 			 if (line[0] == '>' && line[1] == '=')
@@ -488,7 +546,7 @@ int main (int argc, char *argv[])
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
 
 	Lexer lexer;
-	//lexer.LoadReservedWords (reserved_words);
+	// lexer.LoadReservedWords (reserved_words);
 
 
 	try
