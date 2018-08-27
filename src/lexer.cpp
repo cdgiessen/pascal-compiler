@@ -154,12 +154,12 @@ void Lexer::AddMachine (LexerMachine &&machine)
 void Lexer::TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::OptionalToken content)
 {
 	if (content.has_value()) {
-		fmt::print (token_file.FP (), "{:^14}{:<14} {:<4}{:<10}{:<4}{:<4}\n", line_num, lexeme,
+		fmt::print (token_file.FP (), "{:^14}{:<14}{:<4}{:<12}{:<4}{:<4}\n", line_num, lexeme,
 		            static_cast<int>(content->type), enumToString ((content)->type),
 		            (content)->attrib.index (), (content)->attrib);
 		if ((content)->attrib.index() == 9) //lexer error
 		{ 
-		    fmt::print (listing_file.FP (), "LEXERR:\t{}\n", *content);
+		    fmt::print (listing_file.FP (), "LEXERR:\t{}\n", content->attrib);
 		} 
 	}
 	else
@@ -423,7 +423,7 @@ void Lexer::CreateMachines ()
 			 {
 				 int val = std::stoi (Str_ProgramLine (seq));
 
-				 if (i < integer_digit_length)
+				 if (i <= integer_digit_length)
 				 {
 					 if (i > 1 && line[0] == '0')
 					 {

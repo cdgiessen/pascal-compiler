@@ -206,7 +206,7 @@ struct TokenInfo
 
 	friend std::ostream &operator<< (std::ostream &os, const TokenInfo &t)
 	{
-		return os << '\t' << t.line_location << '\t' << enumToString (t.type) << '\t' << t.attrib;
+		return os << enumToString (t.type) << '\t' << t.attrib;
 	}
 };
 
@@ -332,7 +332,7 @@ class Lexer
 	public:
 	Lexer () : listing_file ("listing_file.txt"), token_file ("token_file.txt")
 	{
-		fmt::print (token_file.FP (), "{:^14}{:^14}{:^14}{:^14}\n", "Line No.", "Lexeme", "TOKEN-TYPE", "ATTRIBUTE");
+		fmt::print (token_file.FP (), "{:^14}{:<14}{:<16}{:<14}\n", "Line No.", "Lexeme", "TOKEN-TYPE", "ATTRIBUTE");
 		CreateMachines ();
 	}
 
