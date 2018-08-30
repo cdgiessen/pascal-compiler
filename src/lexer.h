@@ -34,12 +34,12 @@ constexpr int real_exponent_length = 2;
 
 using ProgramLine = std::string_view;
 
-//std::string Str_ProgramLine (const ProgramLine &line);
-//ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy);
-//ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy);
+// std::string Str_ProgramLine (const ProgramLine &line);
+// ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy);
+// ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy);
 
 
-std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
+// std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
 
 
 enum class TokenType
@@ -80,7 +80,7 @@ enum class TokenType
 	BRACKET_OPEN,
 	BRACKET_CLOSE,
 	DOT_DOT,
-    STR_LIT,
+	STR_LIT,
 	END_FILE,
 	LEXERR,
 };
@@ -160,11 +160,12 @@ struct FloatType
 	}
 };
 
-struct StringLiteral {
-    int loc = -1;
-    StringLiteral(int loc): loc(loc) {}
-    
-    friend std::ostream &operator<< (std::ostream &os, const StringLiteral &t)
+struct StringLiteral
+{
+	int loc = -1;
+	StringLiteral (int loc) : loc (loc) {}
+
+	friend std::ostream &operator<< (std::ostream &os, const StringLiteral &t)
 	{
 		return os << t.loc << "(index in literal table)";
 	}
@@ -174,8 +175,8 @@ enum class LexerErrorEnum
 {
 	Unrecognized_Symbol,
 	Id_TooLong,
-    StrLit_TooLong,
-    StrLit_NotTerminated,
+	StrLit_TooLong,
+	StrLit_NotTerminated,
 	Int_InvalidNumericLiteral,
 	Int_TooLong,
 	Int_LeadingZero,
@@ -193,18 +194,18 @@ enum class LexerErrorEnum
 struct LexerError
 {
 	LexerErrorEnum type;
-	ProgramLine errorData;
-	LexerError (LexerErrorEnum type, ProgramLine errorData) : type (type), errorData (errorData) {}
+	std::string errorData;
+		LexerError (LexerErrorEnum type, std::string errorData) : type (type), errorData (errorData) {}
+	LexerError (LexerErrorEnum type, std::string_view errorData) : type (type), errorData (std::string(errorData)) {}
 
 	friend std::ostream &operator<< (std::ostream &os, const LexerError &t)
 	{
-		return os << enumToString(t.type) << " " << Str_ProgramLine(t.errorData);
+		return os << enumToString (t.type) << " " << t.errorData;
 	}
 };
 
 using TokenAttribute =
-std::variant<NoAttrib, StandardEnum, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, 
-    IntType, FloatType, SymbolType, StringLiteral, LexerError>;
+std::variant<NoAttrib, StandardEnum, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, IntType, FloatType, SymbolType, StringLiteral, LexerError>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
 
@@ -243,6 +244,7 @@ struct ReservedWord
 	}
 
 	bool operator== (const std::string &s) const { return (word == s); }
+	bool operator== (const std::string_view &s) const { return (word == s); }
 
 	TokenInfo GetToken () const { return TokenInfo (type, attrib); }
 };
@@ -277,18 +279,18 @@ class OutputFileHandle
 class SymbolTable
 {
 	public:
-	int AddSymbol (std::string &&symbol)
+	int AddSymbol (std::string_view symbol)
 	{
 		int i = 0;
 		for (i = 0; i < symbols.size (); i++)
 		{
 			if (symbol == symbols[i]) return i;
 		}
-		symbols.push_back (symbol);
+		symbols.push_back (std::string(symbol));
 		return i;
 	}
 
-	int GetSymbolLocation (std::string &symbol)
+	int GetSymbolLocation (std::string_view symbol)
 	{
 		for (int i = 0; i < symbols.size (); i++)
 		{
@@ -316,18 +318,20 @@ struct LexerMachineReturn
 	}
 };
 
-struct LexerContext {
-    bool isInComment = false;
-    bool isInLiteral = false;
-    ReservedWordList reservedWords;
+struct LexerContext
+{
+	bool isInComment = false;
+	bool isInLiteral = false;
+	ReservedWordList reservedWords;
 
-    SymbolTable symbolTable;
-    SymbolTable literalTable;
+	SymbolTable symbolTable;
+	SymbolTable literalTable;
 
-    LexerContext(ReservedWordList reservedWords):reservedWords(reservedWords) {}
+	LexerContext (ReservedWordList reservedWords) : reservedWords (reservedWords) {}
 };
 
-using LexerMachineFuncSig = std::function<std::optional<LexerMachineReturn> (LexerContext& context, ProgramLine &line)>;
+using LexerMachineFuncSig =
+std::function<std::optional<LexerMachineReturn> (LexerContext &context, ProgramLine &line)>;
 
 struct LexerMachine
 {
@@ -339,13 +343,16 @@ struct LexerMachine
 	: name (name), precedence (precedence), machine (machine){};
 };
 
-struct TokenStream {
-    TokenStream(std::vector<TokenInfo> tokens, SymbolTable symbolTable) :
-        tokens(tokens), symbolTable(symbolTable){}
+struct TokenStream
+{
+	TokenStream (std::vector<TokenInfo> tokens, SymbolTable symbolTable)
+	: tokens (tokens), symbolTable (symbolTable)
+	{
+	}
 
-    std::vector<TokenInfo> tokens;
+	std::vector<TokenInfo> tokens;
 	SymbolTable symbolTable;
-};	
+};
 
 class Lexer
 {
@@ -356,14 +363,14 @@ class Lexer
 		CreateMachines ();
 	}
 
-	//void LoadReservedWords (ReservedWordList list) { reservedWords = list; };
+	// void LoadReservedWords (ReservedWordList list) { reservedWords = list; };
 	void CreateMachines ();
 
 	void AddMachine (LexerMachine &&machine);
 
-	TokenStream GetTokens (ReservedWordList& list, std::vector<std::string> lines);
+	TokenStream GetTokens (ReservedWordList &list, std::vector<std::string> lines);
 
-	void TokenFilePrinter (int line_num, std::string lexeme, LexerMachineReturn::OptionalToken content);
+	void TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachineReturn::OptionalToken content);
 
 	private:
 	std::vector<LexerMachine> machines;
@@ -371,4 +378,3 @@ class Lexer
 	OutputFileHandle listing_file;
 	OutputFileHandle token_file;
 };
-
