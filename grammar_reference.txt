@@ -4,7 +4,7 @@ Pascal Grammar Reference
 
 
 program -> 
-    program_id ( identifier_list );
+    program id ( identifier_list );
     declarations
     subprogram_declarations
     compound_statement
