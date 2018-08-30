@@ -129,36 +129,37 @@ std::string Str_ProgramLine (const ProgramLine &line)
 	return s;
 }
 
-ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy)
-{
-	if (indexesToCopy >= line.size ())
-		return ProgramLine (line);
-	else
-	{
-		ProgramLine output (indexesToCopy);
-		std::memcpy (output.data (), line.data (), indexesToCopy);
-		return output;
-	}
-}
-
-ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy)
-{
-	if (indexesToCopy >= line.size ())
-		return ProgramLine (line);
-	else
-	{
-		if (firstIndex >= line.size ()) { return ProgramLine (); }
-		if (firstIndex + indexesToCopy >= line.size ())
-		{
-			ProgramLine output (line.size () - firstIndex);
-			std::memcpy (output.data (), &line[firstIndex], line.size () - firstIndex);
-			return output;
-		}
-		ProgramLine output (indexesToCopy);
-		std::memcpy (output.data (), &line[firstIndex], indexesToCopy);
-		return output;
-	}
-}
+//ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy)
+//{
+//
+//	if (indexesToCopy >= line.size ())
+//		return ProgramLine (line);
+//	else
+//	{
+//		ProgramLine output (indexesToCopy);
+//		std::memcpy (output.data (), line.data (), indexesToCopy);
+//		return output;
+//	}
+//}
+//
+//ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy)
+//{
+//	if (indexesToCopy >= line.size ())
+//		return ProgramLine (line);
+//	else
+//	{
+//		if (firstIndex >= line.size ()) { return ProgramLine (); }
+//		if (firstIndex + indexesToCopy >= line.size ())
+//		{
+//			ProgramLine output (line.size () - firstIndex);
+//			std::memcpy (output.data (), &line[firstIndex], line.size () - firstIndex);
+//			return output;
+//		}
+//		ProgramLine output (indexesToCopy);
+//		std::memcpy (output.data (), &line[firstIndex], indexesToCopy);
+//		return output;
+//	}
+//}
 
 
 std::optional<TokenInfo> CheckReseredWords (ReservedWordList &list, std::string s)
@@ -207,16 +208,22 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 	for (auto &s_line : lines)
 	{
 
-		fmt::print (listing_file.FP (), "{}\t{}\n", cur_line_number, s_line);
+		//fmt::print (listing_file.FP (), "{}\t{}\n", cur_line_number, s_line);
+		//
+		//ProgramLine full_line = std::vector<char> (s_line.size ());
+		//std::memcpy (full_line.c_str(), s_line.c_str (), s_line.length ());
+		//
+		//ProgramLine buffer;
 
-		ProgramLine full_line = std::vector<char> (s_line.size ());
-		std::memcpy (full_line.data (), s_line.c_str (), s_line.length ());
+		//std::string_view buffer (full_line.c_str (), s_line.length ());
 
-		ProgramLine buffer;
-		while (backward_index < full_line.size ())
+
+		while (backward_index < s_line.size ())
 		{
-			buffer.clear ();
-			buffer.insert (std::begin (buffer), std::begin (full_line) + backward_index, std::end (full_line));
+			//buffer.clear ();
+			//buffer.insert (std::begin (buffer), std::begin (full_line) + backward_index, std::end (full_line));
+
+			std::string_view buffer (s_line.c_str () + backward_index, s_line.length ());
 
 			auto iter = std::begin (machines);
 			std::optional<LexerMachineReturn> machine_ret = {};
@@ -234,7 +241,7 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 					backward_index += machine_ret->chars_to_eat;
 					if (machine_ret->content.has_value ())
 					{
-						TokenFilePrinter (cur_line_number,
+						TokenFilePrinter (cur_line_number, 
 						                  Str_ProgramLine (Sub_ProgramLine (buffer, machine_ret->chars_to_eat)),
 						                  machine_ret->content);
 
@@ -340,27 +347,28 @@ void Lexer::CreateMachines ()
 
 	AddMachine (
 	{ "IdRes", 90, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		 if (line.size () >= 1 && std::isalpha (line[0]))
-		 {
-			 int index = 0;
-			 while (index < line.size () && std::isalnum (line[index]))
-			 {
-				 index++;
-			 }
-			 if (index <= identifier_length)
-			 {
-				 auto res_word = CheckReseredWords (context.reservedWords,
-				                                    Str_ProgramLine (Sub_ProgramLine (line, index)));
-				 if (res_word.has_value ())
-				 { return LexerMachineReturn (index, res_word.value ()); }
-				 int loc = context.symbolTable.AddSymbol (Str_ProgramLine (Sub_ProgramLine (line, index)));
-				 return LexerMachineReturn (index, TokenInfo (TokenType::ID, SymbolType (loc)));
-			 }
-			 return LexerMachineReturn (index, TokenInfo (TokenType::LEXERR,
-			                                              LexerError (LexerErrorEnum::Id_TooLong,
-			                                                          Sub_ProgramLine (line, index))));
-		 }
-		 return {};
+		 if (line.size () < 1 || !std::isalpha (line[0])) 
+		     return {};
+		 
+		int index = 0;
+		while (index < line.size () && std::isalnum (line[index]))
+			index++;
+		
+
+		if (index > identifier_length)
+		    return LexerMachineReturn (index, TokenInfo (TokenType::LEXERR,
+			                                              LexerError (LexerErrorEnum::Id_TooLong, 
+														  Str_ProgramLine (Sub_ProgramLine (line, index)))));
+		
+		auto res_word = CheckReseredWords (context.reservedWords,
+		                                   Str_ProgramLine (Sub_ProgramLine (line, index)));
+		if (res_word.has_value ()) { 
+		    return LexerMachineReturn (index, res_word.value ()); 
+			}
+		int loc = context.symbolTable.AddSymbol (Str_ProgramLine (Sub_ProgramLine (line, index)));
+		return LexerMachineReturn (index, TokenInfo (TokenType::ID, SymbolType (loc)));
+		
+		
 	 } });
 
 	AddMachine (

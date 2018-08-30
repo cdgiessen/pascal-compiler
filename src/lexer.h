@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <variant>
 #include <vector>
@@ -31,11 +32,11 @@ constexpr int real_base_length = 5;
 constexpr int real_decimal_length = 5;
 constexpr int real_exponent_length = 2;
 
-using ProgramLine = std::vector<char>;
+using ProgramLine = std::string_view;
 
-std::string Str_ProgramLine (const ProgramLine &line);
-ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy);
-ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy);
+//std::string Str_ProgramLine (const ProgramLine &line);
+//ProgramLine Sub_ProgramLine (const ProgramLine &line, int indexesToCopy);
+//ProgramLine Sub_ProgramLine (const ProgramLine &line, int firstIndex, int indexesToCopy);
 
 
 std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
