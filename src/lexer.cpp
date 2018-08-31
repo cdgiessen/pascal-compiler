@@ -197,23 +197,9 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 
 	for (auto &s_line : lines)
 	{
-
-		// fmt::print (listing_file.FP (), "{}\t{}\n", cur_line_number, s_line);
-		//
-		// ProgramLine full_line = std::vector<char> (s_line.size ());
-		// std::memcpy (full_line.c_str(), s_line.c_str (), s_line.length ());
-		//
-		// ProgramLine buffer;
-
-		// std::string_view buffer (full_line.c_str (), s_line.length ());
-
-
 		while (backward_index < s_line.size ())
 		{
-			// buffer.clear ();
-			// buffer.insert (std::begin (buffer), std::begin (full_line) + backward_index, std::end (full_line));
-
-			std::string_view buffer (s_line.c_str () + backward_index, s_line.length ());
+			std::string_view buffer = std::string_view(s_line).substr(backward_index, s_line.size());
 
 			auto iter = std::begin (machines);
 			std::optional<LexerMachineReturn> machine_ret = {};
@@ -287,42 +273,42 @@ void Lexer::CreateMachines ()
 
 	AddMachine (
 	{ "String-Literal", 95, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		 if (line.length () > 0 && line[0] == '\'')
-		 {
-			 int i = 1;
-
-			 while (i < line.length () && line[i] != '\'')
-			 {
-				 i++;
-			 }
-			 i++; // needs to include the extra tick mark
-			 auto full_s = line.substr(0, i);
-			 if (i < line.length ())
-			 {
-				std::string_view tickless_s = std::string_view(line.data() + 1, i - 1);
-
-				 if (i - 2 <= string_literal_length)
-				 {
-					 int loc = context.literalTable.AddSymbol (tickless_s);
-					 return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
-				 }
-				 else
-				 {
-					 return LexerMachineReturn (i,
-					 TokenInfo (TokenType::LEXERR,
-					 LexerError (LexerErrorEnum::StrLit_TooLong, std::string(full_s))));
-				 }
-				 return LexerMachineReturn (i,
-				 TokenInfo (TokenType::LEXERR,
-				 LexerError (LexerErrorEnum::StrLit_TooLong, std::string(full_s))));
-			 }
-
-			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
-			 LexerError (LexerErrorEnum::StrLit_NotTerminated, line.substr(0,line.length ()))));
-		 }
-		 return {};
-	 } });
+		if (line.length () == 0 || line[0] != '\'')
+			return {};
+			
+		
+		int i = 1;
+		while (i < line.length () && line[i] != '\'')
+		{
+			i++;
+		}
+		if (i >= line.length() || line[i] != '\''){
+			fmt::print("{}\n", line);
+			return LexerMachineReturn (i,
+		 		TokenInfo (TokenType::LEXERR,
+		 		LexerError (LexerErrorEnum::StrLit_NotTerminated, line)));
+		}
+		i++; // needs to include the extra tick mark
+		auto full_s = line.substr(0, i);
+		 
+		std::string_view tickless_s = std::string_view(line.data() + 1, i - 1);
+		if (i - 2 <= string_literal_length)
+		{
+			int loc = context.literalTable.AddSymbol (tickless_s);
+			return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
+		}
+		else
+		{
+		 	return LexerMachineReturn (i,
+				TokenInfo (TokenType::LEXERR,
+				LexerError (LexerErrorEnum::StrLit_TooLong, std::string(full_s))));
+		}
+		return LexerMachineReturn (i,
+			TokenInfo (TokenType::LEXERR,
+			LexerError (LexerErrorEnum::StrLit_TooLong, std::string(full_s))));
+			 
+		
+	} });
 
 	AddMachine ({ "Whitespace", 100, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             int i = 0;
