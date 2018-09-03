@@ -1,20 +1,20 @@
-program
-var
-array
-of
-integer
-real
-function
-procedure
-begin
-end
-if
-then
-else
-while
-do
-not
-or
-div
-mod
-and
+program		program		0
+var			var			0
+array		array		0
+of			of			0
+integer		integer		0
+real		real		0
+function	function	0
+procedure	procedure	0
+begin		begin		0
+end			end			0
+if			if			0
+then		then		0
+else		else		0
+while		while		0
+do			do			0
+not			not			0
+or			or			1
+div			div			1
+mod			mod			2
+and			and			3

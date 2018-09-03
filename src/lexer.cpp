@@ -123,8 +123,8 @@ ReservedWordList ReadReservedWordsFile ()
 
 		while (reserved_word_file.good ())
 		{
-			std::string word;
-			reserved_word_file >> word;
+			std::string word, token, attribute;
+			reserved_word_file >> word >> token >> attribute;
 			auto res_word = GetReservedWord (word);
 			if (res_word.has_value ())
 				res_words.insert (res_word.value ());
@@ -178,7 +178,7 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 		(content)->attrib.index (),
 		(content)->attrib);
 		if ((content)->attrib.index () == 10) // lexer error
-		{ fmt::print (listing_file.FP (), "LEXERR:\t{}\n", content->attrib); } }
+		{ fmt::print (listing_file.FP (), "{:<8}{}\n", "LEXERR:",content->attrib); } }
 	else
 	{
 		// fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
@@ -197,6 +197,7 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 
 	for (auto &s_line : lines)
 	{
+		fmt::print(listing_file.FP(),"{:<8}{}\n", cur_line_number, s_line);
 		while (backward_index < s_line.size ())
 		{
 			std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
@@ -236,9 +237,9 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 				TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Unrecognized_Symbol, bad_symbol)));
 
 				if (buffer[0] == EOF)
-					fmt::print (listing_file.FP (), "LEXERR:\t{}\t\n", "Unrecognized Symbol: EOF");
+					fmt::print (listing_file.FP (), "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
 				else
-					fmt::print (listing_file.FP (), "LEXERR:\t{}\t{}\n", "Unrecognized Symbol: ", buffer[0]);
+					fmt::print (listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
 
 				TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
 				tokens.push_back (*machine_ret->content);
