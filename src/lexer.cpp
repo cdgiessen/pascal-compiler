@@ -12,11 +12,8 @@ char const *enumStrings<TokenType>::data[] = { "PROG",
 	"VAR",
 	"ARRAY",
 	"RELOP",
-	"SIMP_EXP",
 	"ADDOP",
-	"TERM",
 	"MULOP",
-	"FACT",
 	"SIGN",
 	"BEGIN",
 	"END",
@@ -60,14 +57,17 @@ char const *enumStrings<LexerErrorEnum>::data[] = {
 	"Int_TooLong",
 	"Int_LeadingZero",
 	"SReal_InvalidNumericLiteral",
+	"SReal1_LeadingZero",
 	"SReal1_TooLong",
 	"SReal2_TooLong",
-	"SReal1_LeadingZero",
 	"LReal_InvalidNumericLiteral",
 	"LReal1_LeadingZero",
+	"LReal2_TrailingZero",
+	"LReal3_LeadingZero",
 	"LReal1_TooLong",
 	"LReal2_TooLong",
 	"LReal3_TooLong",
+	"CommentContains2ndLeftCurlyBrace",
 };
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
@@ -178,7 +178,7 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 		(content)->attrib.index (),
 		(content)->attrib);
 		if ((content)->attrib.index () == 10) // lexer error
-		{ fmt::print (listing_file.FP (), "{:<8}{}\n", "LEXERR:",content->attrib); } }
+		{ fmt::print (listing_file.FP (), "{:<8}{}\n", "LEXERR:", content->attrib); } }
 	else
 	{
 		// fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
@@ -195,9 +195,10 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 	int backward_index = 0;
 	int cur_line_number = 0;
 
-	for (auto &s_line : lines)
+
+	for (auto& s_line : lines)
 	{
-		fmt::print(listing_file.FP(),"{:<8}{}\n", cur_line_number, s_line);
+		fmt::print (listing_file.FP (), "{:<8}{}\n", cur_line_number, s_line);
 		while (backward_index < s_line.size ())
 		{
 			std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
@@ -239,11 +240,16 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 				if (buffer[0] == EOF)
 					fmt::print (listing_file.FP (), "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
 				else
-					fmt::print (listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
+					fmt::print (
+					listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
 
 				TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
 				tokens.push_back (*machine_ret->content);
 				backward_index++;
+			}
+			if (machine_ret.has_value() && machine_ret->content->type == TokenType::END_FILE)
+			{
+				break;
 			}
 		}
 		cur_line_number++;
@@ -254,23 +260,39 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 
 void Lexer::CreateMachines ()
 {
-	AddMachine ({ "Comment", 110, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		             if (line.length () > 0 && line[0] == '{') { context.isInComment = true; }
-		             if (context.isInComment)
-		             {
-			             int i = 0;
-			             while (i < line.length () && line[i] != '}')
-				             i++;
-			             if (i < line.length () && line[i] == '}')
-			             {
-				             context.isInComment = false;
-				             i++;
-				             // if (i > line.size ()) i = line.size () - 1; // overflow?
-			             }
-			             return LexerMachineReturn (i);
-		             }
-		             return {};
-	             } });
+	AddMachine (
+	{ "Comment", 110, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+		 int i = 0;
+		 if (line.length () > 0 && line[0] == '{')
+		 {
+			 context.isInComment = true;
+			 i++;
+		 }
+		 if (context.isInComment)
+		 {
+			 if (i < line.length ())
+			 {
+				 while (i < line.length () && line[i] != '}')
+				 {
+					 if (line[i] == '{')
+					 {
+						 return LexerMachineReturn (i + 1,
+						 TokenInfo (TokenType::LEXERR,
+						 LexerError (LexerErrorEnum::CommentContains2ndLeftCurlyBrace, line.substr (0, i + 1))));
+					 }
+					 i++;
+				 }
+				 if (i < line.length () && line[i] == '}')
+				 {
+					 context.isInComment = false;
+					 i++;
+				 }
+				 return LexerMachineReturn (i);
+			 }
+			 return LexerMachineReturn (i);
+		 }
+		 return {};
+	 } });
 
 	AddMachine (
 	{ "String-Literal", 95, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
@@ -279,9 +301,9 @@ void Lexer::CreateMachines ()
 
 		 int i = 1;
 		 while (i < line.length () && line[i] != '\'')
-		 
+
 			 i++;
-		 
+
 		 if (i >= line.length () || line[i] != '\'')
 		 {
 			 fmt::print ("{}\n", line);
@@ -308,12 +330,11 @@ void Lexer::CreateMachines ()
 
 	AddMachine ({ "Whitespace", 100, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             int i = 0;
-		             while (i < line.length() && (line[i] == ' ' || line[i] == '\t' || line[i] == '\n'))
-		     
+		             while (i < line.length () && (line[i] == ' ' || line[i] == '\t' || line[i] == '\n'))
+		             {
 			             i++;
-		             
-
-		             if (i > 0) return LexerMachineReturn (i);
+		             }
+		             if (i > 0) { return LexerMachineReturn (i); }
 		             return {};
 	             } });
 
@@ -404,18 +425,19 @@ void Lexer::CreateMachines ()
 				 i++;
 				 pow_size++;
 			 }
-			 if (base_size > real_base_length)
-				 return LexerMachineReturn (i,
-				 TokenInfo (TokenType::LEXERR,
-				 LexerError (LexerErrorEnum::LReal1_TooLong, line.substr (0, i))));
-			 if (decimal_size > real_decimal_length)
-				 return LexerMachineReturn (i,
-				 TokenInfo (TokenType::LEXERR,
-				 LexerError (LexerErrorEnum::LReal2_TooLong, line.substr (0, i))));
-			 if (pow_size > real_exponent_length)
-				 return LexerMachineReturn (i,
-				 TokenInfo (TokenType::LEXERR,
-				 LexerError (LexerErrorEnum::LReal3_TooLong, line.substr (0, i))));
+			 //error checking enum. Really just to reduce # of return statements...
+			 LexerErrorEnum errorType = LexerErrorEnum::Unrecognized_Symbol;
+			 if (i > 1 && line[0] == '0')			 errorType = LexerErrorEnum::LReal1_LeadingZero;
+			 if (base_size > real_base_length)		 errorType = LexerErrorEnum::LReal1_TooLong;
+			 if (decimal_size > real_decimal_length) errorType = LexerErrorEnum::LReal2_TooLong;
+			 if (line[base_size +decimal_size] == '0')	 errorType = LexerErrorEnum::LReal2_TrailingZero;
+			 if (pow_size > real_exponent_length)	 errorType = LexerErrorEnum::LReal3_TooLong;
+			 if (line[base_size + decimal_size + 2] == '0') errorType = LexerErrorEnum::LReal3_LeadingZero;
+
+			 if (errorType != LexerErrorEnum::Unrecognized_Symbol) {
+				 return LexerMachineReturn(
+					 i, TokenInfo(TokenType::LEXERR, LexerError(errorType, line.substr(0, i))));
+			 }
 
 			 auto sub = line.substr (0, i);
 			 float val;
@@ -423,13 +445,7 @@ void Lexer::CreateMachines ()
 			 {
 				 val = std::stof (std::string (sub));
 			 }
-			 catch (std::invalid_argument &e)
-			 {
-				 return LexerMachineReturn (i,
-				 TokenInfo (TokenType::LEXERR,
-				 LexerError (LexerErrorEnum::LReal_InvalidNumericLiteral, line.substr (0, i))));
-			 }
-			 catch (std::out_of_range &e)
+			 catch (std::exception &e)
 			 {
 				 return LexerMachineReturn (i,
 				 TokenInfo (TokenType::LEXERR,
@@ -438,13 +454,16 @@ void Lexer::CreateMachines ()
 			 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
 		 }
 
+		 if (i > 1 && line[0] == '0')
+			 return LexerMachineReturn(
+				 i, TokenInfo(TokenType::LEXERR, LexerError(LexerErrorEnum::SReal1_LeadingZero, line.substr(0, i))));
 		 if (base_size > real_base_length)
 			 return LexerMachineReturn (i,
 			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal1_TooLong, line.substr (0, i))));
 		 if (decimal_size > real_decimal_length)
 			 return LexerMachineReturn (i,
 			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal2_TooLong, line.substr (0, i))));
-
+		 
 
 		 auto sub = line.substr (0, i);
 		 float val;
@@ -452,13 +471,7 @@ void Lexer::CreateMachines ()
 		 {
 			 val = std::stof (std::string (sub));
 		 }
-		 catch (std::invalid_argument &e)
-		 {
-			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
-			 LexerError (LexerErrorEnum::SReal_InvalidNumericLiteral, line.substr (0, i))));
-		 }
-		 catch (std::out_of_range &e)
+		 catch (std::exception &e)
 		 {
 			 return LexerMachineReturn (i,
 			 TokenInfo (TokenType::LEXERR,

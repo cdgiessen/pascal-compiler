@@ -44,7 +44,6 @@ using ProgramLine = std::string_view;
 
 enum class TokenType
 {
-
 	PROGRAM,
 	ID,
 	STANDARD_TYPE,
@@ -56,11 +55,8 @@ enum class TokenType
 	VARIABLE,
 	ARRAY,
 	RELOP,
-	SIMPLE_EXPRESSION,
 	ADDOP,
-	TERM,
 	MULOP,
-	FACTOR,
 	SIGN,
 	BEGIN,
 	END,
@@ -181,14 +177,17 @@ enum class LexerErrorEnum
 	Int_TooLong,
 	Int_LeadingZero,
 	SReal_InvalidNumericLiteral,
+	SReal1_LeadingZero,
 	SReal1_TooLong,
 	SReal2_TooLong,
-	SReal1_LeadingZero,
 	LReal_InvalidNumericLiteral,
 	LReal1_LeadingZero,
+	LReal2_TrailingZero,
+	LReal3_LeadingZero,
 	LReal1_TooLong,
 	LReal2_TooLong,
 	LReal3_TooLong,
+	CommentContains2ndLeftCurlyBrace
 };
 
 struct LexerError
