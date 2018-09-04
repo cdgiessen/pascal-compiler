@@ -67,6 +67,7 @@ char const *enumStrings<LexerErrorEnum>::data[] = {
 	"LReal1_TooLong",
 	"LReal2_TooLong",
 	"LReal3_TooLong",
+	"LReal3_TooShort",
 	"CommentContains2ndLeftCurlyBrace",
 };
 
@@ -420,6 +421,19 @@ void Lexer::CreateMachines ()
 		 if (line[i] == 'E')
 		 {
 			 i++;
+			 bool hasSign = false;
+			 bool signVal = false;
+			 if (line[i] == '+') {
+				 hasSign = true; 
+				 signVal = true; 
+				 i++;
+			 }
+			 else if (line[i] == '-') {
+				 hasSign = true; //signVal already false
+				 i++;
+			 }
+
+
 			 while (i < line.size () && std::isdigit (line[i]))
 			 {
 				 i++;
@@ -430,9 +444,11 @@ void Lexer::CreateMachines ()
 			 if (i > 1 && line[0] == '0')			 errorType = LexerErrorEnum::LReal1_LeadingZero;
 			 if (base_size > real_base_length)		 errorType = LexerErrorEnum::LReal1_TooLong;
 			 if (decimal_size > real_decimal_length) errorType = LexerErrorEnum::LReal2_TooLong;
-			 if (line[base_size +decimal_size] == '0')	 errorType = LexerErrorEnum::LReal2_TrailingZero;
+			 if (line[base_size + decimal_size] == '0')	 errorType = LexerErrorEnum::LReal2_TrailingZero;
 			 if (pow_size > real_exponent_length)	 errorType = LexerErrorEnum::LReal3_TooLong;
-			 if (line[base_size + decimal_size + 2] == '0') errorType = LexerErrorEnum::LReal3_LeadingZero;
+			 if (pow_size == 0)                      errorType = LexerErrorEnum::LReal3_TooShort;
+			 if (line[base_size + decimal_size + 2 + hasSign ? signVal : 0] == '0')
+				 errorType = LexerErrorEnum::LReal3_LeadingZero;
 
 			 if (errorType != LexerErrorEnum::Unrecognized_Symbol) {
 				 return LexerMachineReturn(

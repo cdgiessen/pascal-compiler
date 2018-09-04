@@ -40,7 +40,10 @@ begin
 	z := 1.222222E3;
 	z := 1.2E33;
 	z := 1.2E333;
-	z := 1E3;
+	z := 1.1E+3;
+	z := 1.1E-3;
+	z := 1.1E;
+	z := 1.1E+;
 	
 	!
 
@@ -61,6 +64,9 @@ begin
 	read('too_long_literal');
 	read('nonterminated_literal);
 	read(''');
+
+	if(x > 5 and x < 100 or y >= 0 and not y <= 100) then x:= 5 else x:= x
+	do x:= x + 1 while x <> 10
 
 end
 .

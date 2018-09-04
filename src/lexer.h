@@ -187,6 +187,7 @@ enum class LexerErrorEnum
 	LReal1_TooLong,
 	LReal2_TooLong,
 	LReal3_TooLong,
+	LReal3_TooShort,
 	CommentContains2ndLeftCurlyBrace
 };
 
