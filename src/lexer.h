@@ -180,12 +180,14 @@ enum class LexerErrorEnum
 	SReal1_LeadingZero,
 	SReal1_TooLong,
 	SReal2_TooLong,
+	SReal2_TooShort,
 	LReal_InvalidNumericLiteral,
 	LReal1_LeadingZero,
 	LReal2_TrailingZero,
 	LReal3_LeadingZero,
 	LReal1_TooLong,
 	LReal2_TooLong,
+	LReal2_TooShort,
 	LReal3_TooLong,
 	LReal3_TooShort,
 	CommentContains2ndLeftCurlyBrace
@@ -195,8 +197,11 @@ struct LexerError
 {
 	LexerErrorEnum type;
 	std::string errorData;
-		LexerError (LexerErrorEnum type, std::string errorData) : type (type), errorData (errorData) {}
-	LexerError (LexerErrorEnum type, std::string_view errorData) : type (type), errorData (std::string(errorData)) {}
+	LexerError (LexerErrorEnum type, std::string errorData) : type (type), errorData (errorData) {}
+	LexerError (LexerErrorEnum type, std::string_view errorData)
+	: type (type), errorData (std::string (errorData))
+	{
+	}
 
 	friend std::ostream &operator<< (std::ostream &os, const LexerError &t)
 	{
@@ -286,7 +291,7 @@ class SymbolTable
 		{
 			if (symbol == symbols[i]) return i;
 		}
-		symbols.push_back (std::string(symbol));
+		symbols.push_back (std::string (symbol));
 		return i;
 	}
 

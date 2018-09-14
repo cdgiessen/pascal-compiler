@@ -60,12 +60,14 @@ char const *enumStrings<LexerErrorEnum>::data[] = {
 	"SReal1_LeadingZero",
 	"SReal1_TooLong",
 	"SReal2_TooLong",
+	"SReal2_TooShort",
 	"LReal_InvalidNumericLiteral",
 	"LReal1_LeadingZero",
 	"LReal2_TrailingZero",
 	"LReal3_LeadingZero",
 	"LReal1_TooLong",
 	"LReal2_TooLong",
+	"LReal2_TooShort",
 	"LReal3_TooLong",
 	"LReal3_TooShort",
 	"CommentContains2ndLeftCurlyBrace",
@@ -197,7 +199,7 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 	int cur_line_number = 0;
 
 
-	for (auto& s_line : lines)
+	for (auto &s_line : lines)
 	{
 		fmt::print (listing_file.FP (), "{:<8}{}\n", cur_line_number, s_line);
 		while (backward_index < s_line.size ())
@@ -240,19 +242,16 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 
 				if (buffer[0] == EOF)
 					fmt::print (listing_file.FP (), "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
-				else
-					fmt::print (
-					listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
+				// else
+				//	fmt::print (
+				//	listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
 
 				TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
 				tokens.push_back (*machine_ret->content);
 				backward_index++;
 			}
-			if (machine_ret.has_value() && machine_ret->content->type == TokenType::END_FILE)
-			{
-				break;
-			}
-		}
+			if (machine_ret.has_value () && machine_ret->content->type == TokenType::END_FILE)
+			{ break; } }
 		cur_line_number++;
 		backward_index = 0;
 	}
@@ -399,93 +398,147 @@ void Lexer::CreateMachines ()
 	 } });
 
 	AddMachine (
-	{ "Real", 60, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		 int base_size = 0;
-		 int decimal_size = 0;
-		 int pow_size = 0;
+	{ "LReal", 60, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 int i = 0;
+		 int base_size = 0;
 		 while (i < line.size () && std::isdigit (line[i]))
 		 {
 			 i++;
 			 base_size++;
 		 }
+		 if (i == 0) return {};
+
 		 if (i >= line.size () || line[i] != '.') return {};
+
 		 i++;
+
+		 int decimal_size = 0;
 		 while (i < line.size () && std::isdigit (line[i]))
 		 {
 			 i++;
 			 decimal_size++;
 		 }
-		 if (i >= line.size ()) return {};
 
-		 if (line[i] == 'E')
+		 if (i >= line.size () || line[i] != 'E') return {};
+
+		 // LReal
+		 i++;
+		 bool hasSign = false;
+		 if (i < line.size () && (line[i] == '+' || line[i] == '-'))
 		 {
 			 i++;
-			 bool hasSign = false;
-			 bool signVal = false;
-			 if (line[i] == '+') {
-				 hasSign = true; 
-				 signVal = true; 
-				 i++;
-			 }
-			 else if (line[i] == '-') {
-				 hasSign = true; //signVal already false
-				 i++;
-			 }
+			 hasSign = true;
+		 }
+		 if (i >= line.size () || !std::isdigit (line[i])) return {};
+		 i++;
 
-
-			 while (i < line.size () && std::isdigit (line[i]))
-			 {
-				 i++;
-				 pow_size++;
-			 }
-			 //error checking enum. Really just to reduce # of return statements...
-			 LexerErrorEnum errorType = LexerErrorEnum::Unrecognized_Symbol;
-			 if (i > 1 && line[0] == '0')			 errorType = LexerErrorEnum::LReal1_LeadingZero;
-			 if (base_size > real_base_length)		 errorType = LexerErrorEnum::LReal1_TooLong;
-			 if (decimal_size > real_decimal_length) errorType = LexerErrorEnum::LReal2_TooLong;
-			 if (line[base_size + decimal_size] == '0')	 errorType = LexerErrorEnum::LReal2_TrailingZero;
-			 if (pow_size > real_exponent_length)	 errorType = LexerErrorEnum::LReal3_TooLong;
-			 if (pow_size == 0)                      errorType = LexerErrorEnum::LReal3_TooShort;
-			 if (line[base_size + decimal_size + 2 + hasSign ? signVal : 0] == '0')
-				 errorType = LexerErrorEnum::LReal3_LeadingZero;
-
-			 if (errorType != LexerErrorEnum::Unrecognized_Symbol) {
-				 return LexerMachineReturn(
-					 i, TokenInfo(TokenType::LEXERR, LexerError(errorType, line.substr(0, i))));
-			 }
-
-			 auto sub = line.substr (0, i);
-			 float val;
-			 try
-			 {
-				 val = std::stof (std::string (sub));
-			 }
-			 catch (std::exception &e)
-			 {
-				 return LexerMachineReturn (i,
-				 TokenInfo (TokenType::LEXERR,
-				 LexerError (LexerErrorEnum::LReal_InvalidNumericLiteral, line.substr (0, i))));
-			 }
-			 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
+		 int pow_size = 1;
+		 while (i < line.size () && std::isdigit (line[i]))
+		 {
+			 i++;
+			 pow_size++;
 		 }
 
+
+		 if (pow_size == 0)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal3_TooShort, line.substr (0, i))));
+
+		 // error checking
+
+		 if (base_size > real_base_length)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal1_TooLong, line.substr (0, i))));
+
+		 if (decimal_size > real_decimal_length)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal2_TooLong, line.substr (0, i))));
+
+		 if (pow_size > real_exponent_length)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal3_TooLong, line.substr (0, i))));
+
 		 if (i > 1 && line[0] == '0')
-			 return LexerMachineReturn(
-				 i, TokenInfo(TokenType::LEXERR, LexerError(LexerErrorEnum::SReal1_LeadingZero, line.substr(0, i))));
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR,
+			 LexerError (LexerErrorEnum::LReal1_LeadingZero, line.substr (0, i))));
+
+		 if (line[base_size + decimal_size + 2 + hasSign ? 1 : 0] == '0')
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR,
+			 LexerError (LexerErrorEnum::LReal3_LeadingZero, line.substr (0, i))));
+
+		 if (decimal_size == 0)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal2_TooShort, line.substr (0, i))));
+
+		 if (pow_size == 0)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal3_TooShort, line.substr (0, i))));
+
+		 auto sub = line.substr (0, i);
+		 float fval;
+		 try
+		 {
+			 fval = std::stof (std::string (sub));
+		 }
+		 catch (std::exception &e)
+		 {
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR,
+			 LexerError (LexerErrorEnum::LReal_InvalidNumericLiteral, line.substr (0, i))));
+		 }
+
+		 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (fval)));
+	 } });
+
+	AddMachine (
+	{ "SReal", 55, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+		 int i = 0;
+		 int base_size = 0;
+		 while (i < line.size () && std::isdigit (line[i]))
+		 {
+			 i++;
+			 base_size++;
+		 }
+		 if (i == 0) return {};
+
+		 if (i >= line.size () || line[i] != '.') return {};
+
+		 i++;
+
+		 int decimal_size = 0;
+		 while (i < line.size () && std::isdigit (line[i]))
+		 {
+			 i++;
+			 decimal_size++;
+		 }
+
+
+		 // error checking
+
 		 if (base_size > real_base_length)
 			 return LexerMachineReturn (i,
 			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal1_TooLong, line.substr (0, i))));
+
 		 if (decimal_size > real_decimal_length)
 			 return LexerMachineReturn (i,
 			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal2_TooLong, line.substr (0, i))));
-		 
+
+		 if (decimal_size == 0)
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal2_TooShort, line.substr (0, i))));
+		 if (i > 1 && line[0] == '0')
+			 return LexerMachineReturn (i,
+			 TokenInfo (TokenType::LEXERR,
+			 LexerError (LexerErrorEnum::SReal1_LeadingZero, line.substr (0, i))));
+
 
 		 auto sub = line.substr (0, i);
-		 float val;
+		 float fval;
 		 try
 		 {
-			 val = std::stof (std::string (sub));
+			 fval = std::stof (std::string (sub));
 		 }
 		 catch (std::exception &e)
 		 {
@@ -493,7 +546,8 @@ void Lexer::CreateMachines ()
 			 TokenInfo (TokenType::LEXERR,
 			 LexerError (LexerErrorEnum::SReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
-		 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (val)));
+
+		 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (fval)));
 	 } });
 
 	AddMachine (
