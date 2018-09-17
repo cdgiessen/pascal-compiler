@@ -412,7 +412,10 @@ void Lexer::CreateMachines ()
 
 		 i++;
 
-		 int decimal_size = 0;
+		 if (i >= line.size () || !std::isdigit (line[i])) return {};
+		 i++;
+
+		 int decimal_size = 1;
 		 while (i < line.size () && std::isdigit (line[i]))
 		 {
 			 i++;
@@ -507,13 +510,15 @@ void Lexer::CreateMachines ()
 
 		 i++;
 
-		 int decimal_size = 0;
+		 if (i >= line.size () || !std::isdigit (line[i])) return {};
+		 i++;
+
+		 int decimal_size = 1;
 		 while (i < line.size () && std::isdigit (line[i]))
 		 {
 			 i++;
 			 decimal_size++;
 		 }
-
 
 		 // error checking
 
