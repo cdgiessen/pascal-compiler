@@ -1,0 +1,102 @@
+//original grammar
+TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + -
+
+
+program -> 
+    program id ( identifier_list ) ; declarations subprogram_declarations compound_statement .
+
+identifier_list ->
+    id
+    identifier_list , id
+
+declarations ->
+    declarations var id : type ;
+    e
+
+type ->
+    standard_type
+    array [ num .. num ] of standard_type
+
+standard_type ->
+    integer
+    real
+
+subprogram_declarations ->
+    subprogram_declarations subprogram_declaration ;
+    e
+
+subprogram_declaration ->
+    subprogram_head declarations subprogram_declarations compound_statement
+
+subprogram_head ->
+    procedure id arugments ;
+
+arugments ->
+    ( parameter_list )
+    e
+
+parameter_list ->
+    id : type
+    parameter_list ; id : type
+
+compound_statement ->
+    begin optional_statements end
+
+optional_statements ->
+    statement_list
+    e
+
+statement_list ->
+    statement
+    statement_list ; statement
+
+statement ->
+    matched_statement
+    unmatched_statement
+
+matched_statement ->
+    if expression then matched_statement else matched_statement
+    variable assignop expression
+    procedure_statement
+    compound_statement
+    while expression do statement
+
+unmatched_statement ->
+    if expression then statement
+    if expression then matched_statement else unmatched_statement
+
+variable ->
+    id
+    id [ expression ]
+
+procedure_statement ->
+    call id
+    call id ( expression_list )
+
+expression_list ->
+    expression
+    expression_list, expression
+
+expression ->
+    simple_expression
+    simple_expression relop simple_expression
+
+simple_expression ->
+    term
+    sign_term
+    simple_expression addop term
+
+term ->
+    factor
+    term mulop factor
+
+factor ->
+    id
+    num
+    ( expression )
+    not factor
+
+sign ->
+    + 
+    -
+

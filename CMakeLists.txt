@@ -13,6 +13,12 @@ add_executable(lexer src/lexer.cpp src/parser.cpp)
 target_link_libraries(lexer PUBLIC fmt)
 
 
+add_executable(massager src/grammar_massager.cpp) 
+
+target_link_libraries(massager PUBLIC fmt)
+
+
+
 add_custom_command(
         TARGET lexer POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy

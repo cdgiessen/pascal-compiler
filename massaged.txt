@@ -1,0 +1,151 @@
+TOKENS - + not mulop assignop addop relop , call end begin . ; ) ( program id var : array [ ] num of integer real procedure 
+program ->
+	program id ( identifier_list ) ; declarations subprogram_declarations compound_statement . 
+
+identifier_list ->
+	id 
+
+identifier_list ->
+	identifier_list , id 
+
+declarations ->
+	declarations var id : type ; 
+
+declarations ->
+	e 
+
+type ->
+	standard_type 
+
+type ->
+	array [ num .. num ] of standard_type 
+
+standard_type ->
+	integer 
+
+standard_type ->
+	real 
+
+subprogram_declarations ->
+	subprogram_declarations subprogram_declaration ; 
+
+subprogram_declarations ->
+	e 
+
+subprogram_declaration ->
+	subprogram_head declarations subprogram_declarations compound_statement 
+
+subprogram_head ->
+	procedure id arugments ; 
+
+arugments ->
+	( parameter_list ) 
+
+arugments ->
+	e 
+
+parameter_list ->
+	id : type 
+
+parameter_list ->
+	parameter_list ; id : type 
+
+compound_statement ->
+	begin optional_statements end 
+
+optional_statements ->
+	statement_list 
+
+optional_statements ->
+	e 
+
+statement_list ->
+	statement 
+
+statement_list ->
+	statement_list ; statement 
+
+statement ->
+	matched_statement 
+
+statement ->
+	unmatched_statement 
+
+matched_statement ->
+	if expression then matched_statement else matched_statement 
+
+matched_statement ->
+	variable assignop expression 
+
+matched_statement ->
+	procedure_statement 
+
+matched_statement ->
+	compound_statement 
+
+matched_statement ->
+	while expression do statement 
+
+unmatched_statement ->
+	if expression then statement 
+
+unmatched_statement ->
+	if expression then matched_statement else unmatched_statement 
+
+variable ->
+	id 
+
+variable ->
+	id [ expression ] 
+
+procedure_statement ->
+	call id 
+
+procedure_statement ->
+	call id ( expression_list ) 
+
+expression_list ->
+	expression 
+
+expression_list ->
+	expression_list, expression 
+
+expression ->
+	simple_expression 
+
+expression ->
+	simple_expression relop simple_expression 
+
+simple_expression ->
+	term 
+
+simple_expression ->
+	sign_term 
+
+simple_expression ->
+	simple_expression addop term 
+
+term ->
+	factor 
+
+term ->
+	term mulop factor 
+
+factor ->
+	id 
+
+factor ->
+	num 
+
+factor ->
+	( expression ) 
+
+factor ->
+	not factor 
+
+sign ->
+	+  
+
+sign ->
+	- 
+
