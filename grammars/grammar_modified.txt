@@ -75,7 +75,7 @@ procedure_statement ->
 
 expression_list ->
     expression
-    expression_list, expression
+    expression_list , expression
 
 expression ->
     simple_expression
@@ -97,6 +97,6 @@ factor ->
     not factor
 
 sign ->
-    + 
+    +
     -
 

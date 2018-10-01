@@ -2,6 +2,15 @@ TOKENS - + not mulop assignop addop relop , call end begin . ; ) ( program id va
 program ->
 	program id ( identifier_list ) ; declarations subprogram_declarations compound_statement . 
 
+program ->
+	program id ( identifier_list ) ; declarations compound_statement . 
+
+program ->
+	program id ( identifier_list ) ; subprogram_declarations compound_statement . 
+
+program ->
+	program id ( identifier_list ) ; compound_statement . 
+
 identifier_list ->
 	id 
 
@@ -12,7 +21,7 @@ declarations ->
 	declarations var id : type ; 
 
 declarations ->
-	e 
+	var id : type ; 
 
 type ->
 	standard_type 
@@ -30,19 +39,28 @@ subprogram_declarations ->
 	subprogram_declarations subprogram_declaration ; 
 
 subprogram_declarations ->
-	e 
+	subprogram_declaration ; 
 
 subprogram_declaration ->
 	subprogram_head declarations subprogram_declarations compound_statement 
 
+subprogram_declaration ->
+	subprogram_head declarations compound_statement 
+
+subprogram_declaration ->
+	subprogram_head subprogram_declarations compound_statement 
+
+subprogram_declaration ->
+	subprogram_head compound_statement 
+
 subprogram_head ->
 	procedure id arugments ; 
 
-arugments ->
-	( parameter_list ) 
+subprogram_head ->
+	procedure id ; 
 
 arugments ->
-	e 
+	( parameter_list ) 
 
 parameter_list ->
 	id : type 
@@ -53,11 +71,11 @@ parameter_list ->
 compound_statement ->
 	begin optional_statements end 
 
-optional_statements ->
-	statement_list 
+compound_statement ->
+	begin end 
 
 optional_statements ->
-	e 
+	statement_list 
 
 statement_list ->
 	statement 
