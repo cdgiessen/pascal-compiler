@@ -2,7 +2,7 @@
 TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + -
 
 
-program -> 
+program_statement -> 
     program id ( identifier_list ) ; declarations subprogram_declarations compound_statement .
 
 identifier_list ->
