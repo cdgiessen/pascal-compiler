@@ -4,9 +4,10 @@
 #include <iostream>
 #include <sstream>
 #include <string_view>
-#include <unordered_set>
 
+#include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <fmt/format.h>
@@ -39,11 +40,46 @@ struct Production
 
 struct Grammar
 {
-	std::unordered_map<int, std::string> terminals;
-	std::unordered_map<int, std::string> variables;
+	std::map<int, std::string> terminals;
+	std::map<int, std::string> variables;
 	std::vector<Production> productions;
 	int start_symbol = 0; // should generally be the first production...
 	int index = 0;
+};
+
+struct ParseTable
+{
+	Grammar grammar;
+	std::map<int, int> var_key_to_index;
+
+	// row-var, col-terminal, inner is for possible multiple entries
+	std::vector<std::vector<std::vector<int>>> table;
+
+	ParseTable (Grammar &grammar) : grammar (grammar)
+	{
+		table = std::vector<std::vector<std::vector<int>>> (
+		grammar.variables.size (), std::vector<std::vector<int>> (grammar.terminals.size ()));
+
+		int index = 0;
+		for (auto &[key, value] : grammar.variables)
+		{
+			var_key_to_index[key] = index++;
+		}
+
+		index = 0;
+		for (auto &prod : grammar.productions)
+		{
+			if (prod.rule.at (0).isTerm)
+			{
+
+				int first_token_index = prod.rule.at (0).index;
+				int var_key = var_key_to_index.at (prod.var);
+
+				table.at (var_key).at (first_token_index).push_back (index++);
+			}
+			// TODO logic for following variables
+		}
+	}
 };
 
 void PrintGrammar (Grammar &grammar, OutputFileHandle &ofh)
@@ -70,6 +106,42 @@ void PrintGrammar (Grammar &grammar, OutputFileHandle &ofh)
 	}
 }
 
+void PrintParseTable (ParseTable &parse, OutputFileHandle &ofh)
+{
+	fmt::print (ofh.FP (), "TOKENS, ");
+	for (auto [key, value] : parse.grammar.terminals)
+	{
+		fmt::print (ofh.FP (), "\'{}\', ", value);
+	}
+	fmt::print (ofh.FP (), "\n");
+
+
+	int i = 0;
+	for (auto [key, value] : parse.grammar.variables)
+	{
+		fmt::print (ofh.FP (), "{}, ", value);
+		for (auto &terms : parse.table.at (i))
+		{
+			fmt::print (ofh.FP (), ", ");
+			for (auto &index : terms)
+			{
+				fmt::print (
+				ofh.FP (), "{} -> ", parse.grammar.variables.at (parse.grammar.productions[index].var));
+				for (auto &token : parse.grammar.productions[index].rule)
+				{
+					if (token.isTerm)
+						fmt::print (ofh.FP (), "\'{}\' ", parse.grammar.terminals[token.index]);
+					else
+						fmt::print (ofh.FP (), "{} ", parse.grammar.variables[token.index]);
+				}
+				if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
+			}
+		}
+		fmt::print (ofh.FP (), "\n");
+		i++;
+	}
+}
+
 bool isEProd (Rule &rule, Grammar &grammar)
 {
 	for (auto &token : rule)
@@ -83,6 +155,17 @@ bool isEProd (Rule &rule, Grammar &grammar)
 		}
 	}
 	return false;
+}
+
+int find_epsilon_index (Grammar &grammar)
+{
+	int e_index = -1;
+	for (auto [key, value] : grammar.variables)
+	{
+		if (value == "e") e_index = key;
+	}
+	if (e_index == -1) { grammar.variables[grammar.index++] = "e"; }
+	return e_index;
 }
 
 std::vector<Rule> PermuteRule (Rule original_rule, std::vector<bool> &found_e_vars, int iteration)
@@ -209,11 +292,7 @@ void RemoveImmediateLeftRecursion (Variable var, Grammar &grammar)
 			grammar.variables[grammar.index++] = new_prod_name;
 
 			// find the 'e' variable and add a new production for var_prime with e as its rule
-			int e_index = -1;
-			for (auto [key, value] : grammar.variables)
-			{
-				if (value == "e") e_index = key;
-			}
+			int e_index = find_epsilon_index (grammar);
 
 			Rule r;
 			r.push_back (Token (false, e_index));
@@ -282,47 +361,66 @@ Grammar RemoveLeftRecursion (Grammar &eLess_Grammar)
 
 		// find prods with key as their starting variable;
 		std::vector<Production> var_productions;
+
 		for (auto &prod : res_grammar.productions)
 		{
 			if (prod.var == index) var_productions.push_back (prod);
 		}
-
-		// for each rule with Ai→αi
-		for (auto &prod : var_productions)
+		bool keepSorting = true;
+		while (keepSorting)
 		{
-			// if αi begins with nonterminal Aj and j<i
-			if (prod.rule.size () > 0 && !prod.rule[0].isTerm &&
-			    var_index_priority[prod.rule[0].index] < var_index_priority[index])
+			bool hasChanged = false;
+
+			// find prods with key as their starting variable;
+			std::vector<Production> var_productions;
+
+			for (auto &prod : res_grammar.productions)
 			{
-				// Let βi be αi without its leading Aj.
-				Variable Aj = prod.rule[0].index;
-				Rule r = prod.rule;
-				r.erase (std::begin (r));
-
-				// Remove the rule Ai→αi.
-				auto it =
-				std::find (std::begin (res_grammar.productions), std::end (res_grammar.productions), prod);
-				if (it != std::end (res_grammar.productions)) res_grammar.productions.erase (it);
-
-				// Find Aj productions
-				std::vector<Production> Aj_prods;
-				for (auto &prod : res_grammar.productions)
+				if (prod.var == index) var_productions.push_back (prod);
+			}
+			// for each rule with Ai→αi
+			for (auto &prod : var_productions)
+			{
+				// if αi begins with nonterminal Aj and j<i
+				if (prod.rule.size () > 0 && !prod.rule[0].isTerm &&
+				    var_index_priority[prod.rule[0].index] < var_index_priority[index])
 				{
-					if (prod.var == Aj) Aj_prods.push_back (prod);
-				}
+					// Let βi be αi without its leading Aj.
+					Variable Aj = prod.rule[0].index;
+					Rule r = prod.rule;
+					r.erase (std::begin (r));
 
-				// For each rule Aj→αj:
-				for (auto &j_prod : Aj_prods)
-				{
-					// Add the rule Ai→αjβi .
-					if (j_prod.rule.size () > 0)
-					{ //&& prod.rule[0].index == j_prod.var) {
-						Rule new_r = j_prod.rule;
-						new_r.insert (std::end (new_r), std::begin (r), std::end (r));
-						res_grammar.productions.push_back (Production (prod.var, new_r));
+					// Remove the rule Ai→αi.
+					auto it = std::find (
+					std::begin (res_grammar.productions), std::end (res_grammar.productions), prod);
+					if (it != std::end (res_grammar.productions))
+						res_grammar.productions.erase (it);
+
+					// Find Aj productions
+					std::vector<Production> Aj_prods;
+					for (auto &prod : res_grammar.productions)
+					{
+						if (prod.var == Aj) Aj_prods.push_back (prod);
+					}
+
+					// For each rule Aj→αj:
+					for (auto &j_prod : Aj_prods)
+					{
+						// Add the rule Ai→αjβi .
+						if (j_prod.rule.size () > 0)
+						{ //&& prod.rule[0].index == j_prod.var) {
+							Rule new_r = j_prod.rule;
+							new_r.insert (std::end (new_r), std::begin (r), std::end (r));
+							res_grammar.productions.push_back (Production (prod.var, new_r));
+							hasChanged = true;
+						}
 					}
 				}
 			}
+			if (hasChanged)
+				keepSorting = true;
+			else
+				keepSorting = false;
 		}
 		fmt::print ("Removing Left Recusion of {}\n", priority);
 		RemoveImmediateLeftRecursion (index, res_grammar);
@@ -340,6 +438,79 @@ Grammar RemoveLeftRecursion (Grammar &eLess_Grammar)
 	                    Add the rule Ai→αjβi .
 	    Remove direct left recursion for Ai as described above
 	*/
+}
+
+Grammar RemoveXLeftFactoring (Grammar &in_grammar)
+{
+	Grammar res_grammar;
+	res_grammar.terminals = in_grammar.terminals;
+	res_grammar.variables = in_grammar.variables;
+	res_grammar.productions = in_grammar.productions;
+	res_grammar.index = in_grammar.index;
+
+	std::unordered_map<int, std::vector<Production>> num_variable_occurances;
+	for (auto &prod : res_grammar.productions)
+	{
+		int hash = prod.var * 1000 + prod.rule[0].index;
+		num_variable_occurances[hash].push_back (prod);
+	}
+	for (auto &[key, prods] : num_variable_occurances)
+	{
+		if (prods.size () > 1)
+		{
+			// make new variable
+			std::string new_prod_name =
+			res_grammar.variables[prods[0].var] + std::string ("_factored");
+			int new_index = res_grammar.index;
+			res_grammar.variables[res_grammar.index++] = new_prod_name;
+
+			// remove original production
+			for (auto &prod : prods)
+			{
+				auto it =
+				std::find (std::begin (res_grammar.productions), std::end (res_grammar.productions), prod);
+				if (it != std::end (res_grammar.productions)) res_grammar.productions.erase (it);
+			}
+
+			// count number of repeated characters are at the front
+			int num_repeated = 0;
+			for (auto &token : prods[0].rule)
+			{
+				Token tok = token;
+				bool all_the_same = true;
+				for (auto &prod : prods)
+				{
+					if (!(prod.rule[num_repeated] == token)) all_the_same = false;
+				}
+				if (all_the_same)
+					num_repeated++;
+				else
+					break;
+			}
+
+			// add replacement production with only the first token from rule
+			Rule rule;
+			// rule.push_back (prods[0].rule[0]);
+			rule.insert (std::end (rule), std::begin (prods[0].rule), std::begin (prods[0].rule) + num_repeated);
+			rule.push_back (Token (false, new_index));
+			res_grammar.productions.push_back (Production (prods[0].var, rule));
+
+
+			// Add new productions with
+			for (auto &prod : prods)
+			{
+				Rule new_r;
+				new_r.insert (
+				std::end (new_r), std::begin (prod.rule) + num_repeated, std::end (prod.rule));
+				if (new_r.size () == 0)
+				{
+					new_r.push_back (Token (false, find_epsilon_index (res_grammar))); // insert epsilon
+				}
+				res_grammar.productions.push_back (Production (new_index, new_r));
+			}
+		}
+	}
+	return res_grammar;
 }
 
 Grammar ReadGrammar (std::ifstream &in)
@@ -448,12 +619,7 @@ Grammar ReadGrammar (std::ifstream &in)
 		}
 	}
 
-	int e_index = -1;
-	for (auto [key, value] : grammar.variables)
-	{
-		if (value == "e") e_index = key;
-	}
-	if (e_index == -1) { grammar.variables[grammar.index++] = "e"; }
+	int e_index = find_epsilon_index (grammar);
 
 	grammar.index = index;
 	return grammar;
@@ -487,6 +653,14 @@ void MassageGrammar (std::string grammar_fileName)
 		auto ll_less_Grammar = RemoveLeftRecursion (eLess_Grammar);
 		OutputFileHandle ofh_lr_less ("left_recursive_less_full.txt");
 		PrintGrammar (ll_less_Grammar, ofh_lr_less);
+
+		auto factored_Grammar = RemoveXLeftFactoring (ll_less_Grammar);
+		OutputFileHandle ofh_factoring ("factored_full.txt");
+		PrintGrammar (factored_Grammar, ofh_factoring);
+
+		auto parse_table = ParseTable (factored_Grammar);
+		OutputFileHandle ofh_parse_table ("parse_table.txt");
+		PrintParseTable (parse_table, ofh_parse_table);
 	}
 }
 

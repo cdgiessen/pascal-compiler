@@ -3,13 +3,9 @@ TOKENS a b c d
 S ->
 	A a
 	b
-	B c
-	S d
 
 A ->
 	A c
-	S b
-
-B ->
-	c
 	S d
+	e
+

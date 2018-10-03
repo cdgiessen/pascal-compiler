@@ -1,5 +1,5 @@
 //original grammar
-TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + - if then else while do .. 
+TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + -
 
 
 program_statement -> 
@@ -29,9 +29,9 @@ subprogram_declaration ->
     subprogram_head declarations subprogram_declarations compound_statement
 
 subprogram_head ->
-    procedure id arguments ;
+    procedure id arugments ;
 
-arguments ->
+arugments ->
     ( parameter_list )
     e
 
@@ -51,12 +51,19 @@ statement_list ->
     statement_list ; statement
 
 statement ->
+    matched_statement
+    unmatched_statement
+
+matched_statement ->
+    if expression then matched_statement else matched_statement
     variable assignop expression
     procedure_statement
     compound_statement
-    if expression then statement else statement
-	if expression then statement
     while expression do statement
+
+unmatched_statement ->
+    if expression then statement
+    if expression then matched_statement else unmatched_statement
 
 variable ->
     id
