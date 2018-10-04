@@ -29,7 +29,7 @@ add_custom_command(TARGET lexer POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 		${PROJECT_SOURCE_DIR}/test_input $<TARGET_FILE_DIR:lexer>/test_input)
 
-        add_custom_command(TARGET lexer POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${PROJECT_SOURCE_DIR}/grammars $<TARGET_FILE_DIR:lexer>/grammars)
+add_custom_command(TARGET massager POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${PROJECT_SOURCE_DIR}/grammars $<TARGET_FILE_DIR:lexer>/grammars)
     
