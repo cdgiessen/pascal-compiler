@@ -76,7 +76,7 @@ expression ->
 
 simple_expression ->
     term
-    sign_term
+    sign term
     simple_expression addop term
 
 term ->
