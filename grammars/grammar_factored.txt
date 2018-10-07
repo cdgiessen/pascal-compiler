@@ -1,0 +1,160 @@
+//left factored out
+TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + - if then else while do .. 
+
+
+0.0.0.0 program_statement -> 
+0.0.0.1	    program id ( identifier_list ) ; program_statement_factored
+
+0.0.0.2 program_statement_factored ->
+0.0.0.3	    declarations program_statement_factored_fractored
+0.2.0.5	    subprogram_declarations compound_statement .
+0.3.0.6     compound_statement .
+
+0.0.0.7 program_statement_factored_fractored ->
+0.0.0.8	    subprogram_declarations compound_statement .
+0.1.0.9	    compound_statement .
+
+1.0.0 identifier_list ->
+1.0.1   id identifier_list_prime
+
+1.0.2  identifier_list_prime ->
+1.0.3    , id identifier_list_prime
+1.0.4   e
+
+2.0.0 declarations ->
+2.0.1   declarations_prime
+
+2.0.2 declarations_prime ->
+2.0.3   var id : type ; declarations_prime
+2.0.4   e
+
+3. type ->
+    standard_type
+    array [ num .. num ] of standard_type
+
+4. standard_type ->
+    integer
+    real
+
+5.0.0 subprogram_declarations ->
+5.0.1   subprogram_declarations_prime
+
+5.0.2 subprogram_declarations_prime ->
+5.0.2   subprogram_declaration ; subprogram_declarations_prime
+5.0.3   e
+
+6.0.0.0 subprogram_declaration ->
+6.0.0.1    subprogram_head subprogram_declaration_factored
+
+6.0.0.2 subprogram_declaration_factored ->
+6.0.0.3   declarations ssubprogram_declaration_factored_factored
+6.2.0.5   subprogram_declarations compound_statement
+6.3.0.6   compound_statement
+
+6.0.0.2 subprogram_declaration_factored_factored ->
+6.0.0.3   subprogram_declarations compound_statement
+6.1.0.4   compound_statement
+
+7.0.0.0 subprogram_head ->
+7.0.0.1 procedure id subprogram_head_factored
+
+7.0.0.2 subprogram_head_factored ->
+7.0.0.3 arguments ;
+7.1.0.4	;
+
+8. arguments ->
+    ( parameter_list )
+
+9.0.0 parameter_list ->
+9.0.1    id : type parameter_list_prime
+    
+9.0.2 parameter_list_prime ->
+9.0.3   ; id : parameter_list_prime
+9.0.4   e
+
+10.0.0.0 compound_statement ->
+10.0.0.1    begin compound_statement_factored
+
+10.0.0.2 compound_statement_factored ->
+10.0.0.3    optional_statements end
+10.1.0.4	end
+
+11. optional_statements ->
+    statement_list
+
+12.0.0 statement_list ->
+12.0.1  statement statement_list_prime 
+
+12.0.2 statement_list_prime ->
+12.0.3  ; statement statement_list_prime
+12.0.4  e
+
+13.0.0 statement ->
+13.0.1  variable assignop expression
+13.0.2  procedure_statement
+13.0.3.0  begin statement_factored_one
+13.0.5.1  if expression then statement statement_factored_two
+13.0.7  while expression do statement
+
+13.0.0.2 statement_factored_one ->
+13.0.3.3  optional_statements end
+13.0.4.4  end
+
+13.0.0 statement_factored_two ->
+13.0.5.5  else statement
+13.0.6.6  e
+
+14.0.0.0 variable ->
+14.0.0.1   id variable_factored
+
+14.0.0.2 variable_factored ->
+14.0.0.2    e
+14.0.0.3    [ expression ]
+
+15.0.0.0 procedure_statement ->
+15.0.0.1    call id procedure_statement_factored
+
+15.0.0.2 procedure_statement_factored ->
+15.0.0.3    e
+15.0.0.4    ( expression_list )
+
+16.0.0 expression_list ->
+16.0.1    expression expression_list_prime
+
+16.0.2 expression_list_prime ->
+16.0.3  , expression expression_list_prime
+16.0.4  e
+
+17.0.0.0 expression ->
+17.0.0.1    simple_expression expression_factored
+    
+
+17.0.0.2 expression_factored ->
+17.0.0.3    e
+17.0.0.4    relop simple_expression
+
+18.0.0 simple_expression ->
+18.0.1    term simple_expression_prime
+18.0.2    sign term simple_expression_prime
+
+18.0.3 simple_expression_prime ->
+18.0.3 addop term simple_expression_prime
+18.0.5  e
+
+19.0.0 term ->
+19.0.1    factor term_prime
+
+19.0.2 term_prime ->
+19.0.3    mulop factor term_prime
+19.0.4    e
+
+20. factor ->
+    id
+    num
+    ( expression )
+    not factor
+
+21. sign ->
+    +
+    -
+

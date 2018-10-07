@@ -1,78 +1,5 @@
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string_view>
-
-#include <map>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-
-#include "lexer.h"
-
-using Variable = int;
-using Terminal = int;
-
-struct Token
-{
-	bool isTerm;
-	int index;
-	Token () {}
-	Token (bool isTerm, int index) : isTerm (isTerm), index (index) {}
-	bool operator== (const Token &rhs) const { return rhs.isTerm == isTerm && rhs.index == index; }
-};
-
-using Rule = std::vector<Token>;
-
-struct Production
-{
-	Variable var;
-	Rule rule;
-	Production (Variable var, Rule rule) : var (var), rule (rule) {}
-
-	bool operator== (const Production &rhs) const
-	{
-		if ((rhs.var == var) && (rhs.rule.size () == rule.size ()))
-		{
-			for (int i = 0; i < rhs.rule.size (); i++)
-			{
-
-				if (rhs.rule[i].index != rule[i].index) { return false; }
-			}
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-};
-
-class Grammar
-{
-	public:
-	std::map<int, std::string> terminals;
-	std::map<int, std::string> variables;
-	std::vector<Production> productions;
-	int start_symbol = 0; // should generally be the first production...
-	int index = 0;
-
-	int DeriveNewVariable (Variable var, std::string str);
-	bool isEProd (Rule &rule);
-	int find_epsilon_index ();
-	std::vector<Terminal> find_firsts_of_production (Production &prod);
-	bool ProductionExists (Production &p);
-	void ReorderProductionsByVariable ();
-	void AddProduction (Production p);
-	void EraseProduction (Production &p);
-	std::vector<Production> ProductionsOfVariable (Variable var);
-};
+#include "grammar_massager.h"
 
 void Grammar::AddProduction (Production p)
 {
@@ -101,7 +28,7 @@ int Grammar::DeriveNewVariable (Variable var, std::string str)
 	return new_index;
 }
 
-bool Grammar::isEProd (Rule &rule)
+bool Grammar::isEProd (Rule &rule) const
 {
 	for (auto &token : rule)
 	{
@@ -115,14 +42,14 @@ bool Grammar::isEProd (Rule &rule)
 	return false;
 }
 
-int Grammar::find_epsilon_index ()
+int Grammar::find_epsilon_index () const
 {
 	int e_index = -1;
 	for (auto [key, value] : variables)
 	{
 		if (value == "e") e_index = key;
 	}
-	if (e_index == -1) { variables[index++] = "e"; }
+	// if (e_index == -1) { variables[index++] = "e"; }
 	return e_index;
 }
 
@@ -178,17 +105,17 @@ std::vector<Terminal> Grammar::find_firsts_of_production (Production &prod)
 	return possible_prods;
 }
 
-bool Grammar::ProductionExists (Production &p)
+bool Grammar::ProductionExists (Production &p) const
 {
 	auto it = std::find (std::begin (productions), std::end (productions), p);
 	if (it != std::end (productions)) { return true; }
 	return false;
 }
 
-std::vector<Production> Grammar::ProductionsOfVariable (Variable var)
+std::vector<Production> Grammar::ProductionsOfVariable (Variable var) const
 {
 	std::vector<Production> prods;
-	for (auto prod : productions)
+	for (auto &prod : productions)
 	{
 		if (prod.var == var) prods.push_back (prod);
 	}
@@ -262,151 +189,146 @@ std::map<int, std::vector<int>> &follows)
 {
 }
 
-struct ParseTable
+ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
 {
-	Grammar grammar;
-	std::map<int, int> var_key_to_index;
+	table = std::vector<std::vector<std::set<int>>> (
+	grammar.variables.size (), std::vector<std::set<int>> (grammar.terminals.size ()));
+	// grammar.ReorderProductionsByVariable ();
+	int e_index = grammar.find_epsilon_index ();
 
-	// row-var, col-terminal, inner is for possible multiple entries
-	std::vector<std::vector<std::set<int>>> table;
+	// map var keys to 0 based index. not sure if necessary if I just make everything maps...
+	int index = 0;
+	for (auto &[key, value] : grammar.variables)
 
-	ParseTable (Grammar &grammar) : grammar (grammar)
+		var_key_to_index[key] = index++;
+
+	// pre-bucket all the productions per key. Just removes needless searching in first
+	// calculation which could be heavily recursive...
+	std::map<int, std::vector<Production>> var_productions;
+	for (auto &prod : grammar.productions)
 	{
-		table = std::vector<std::vector<std::set<int>>> (
-		grammar.variables.size (), std::vector<std::set<int>> (grammar.terminals.size ()));
-		// grammar.ReorderProductionsByVariable ();
-		int e_index = grammar.find_epsilon_index ();
+		if (prod.var != e_index) // stupid special cases
+			var_productions[prod.var].push_back (prod);
+	}
 
-		// map var keys to 0 based index. not sure if necessary if I just make everything maps...
-		int index = 0;
-		for (auto &[key, value] : grammar.variables)
+	std::map<int, std::vector<int>> firsts;
+	std::map<int, std::vector<int>> follows;
 
-			var_key_to_index[key] = index++;
 
-		// pre-bucket all the productions per key. Just removes needless searching in first
-		// calculation which could be heavily recursive...
-		std::map<int, std::vector<Production>> var_productions;
-		for (auto &prod : grammar.productions)
+
+	// find symbols with e prods - first need to fill out map with false values
+	std::map<int, bool> e_prods;
+	for (auto [key, value] : grammar.variables)
+	{
+		if (key == e_index)
 		{
-			if (prod.var != e_index) // stupid special cases
-				var_productions[prod.var].push_back (prod);
+			e_prods[key] = true; // special case gone wrong....
 		}
-
-		std::map<int, std::vector<int>> firsts;
-		std::map<int, std::vector<int>> follows;
-
-
-
-		// find symbols with e prods - first need to fill out map with false values
-		std::map<int, bool> e_prods;
-		for (auto [key, value] : grammar.variables)
+		else
 		{
-			if (key == e_index)
-			{
-				e_prods[key] = true; // special case gone wrong....
-			}
-			else
-			{
 
-				firsts[key] = std::vector<int> (); // should be enough to initialize them right?
-				follows[key] = std::vector<int> ();
-				e_prods[key] = false;
-			}
-		}
-		for (auto [key, value] : grammar.terminals)
-		{
+			firsts[key] = std::vector<int> (); // should be enough to initialize them right?
+			follows[key] = std::vector<int> ();
 			e_prods[key] = false;
 		}
-
-		// find all epsilon production variables
-		for (auto &prod : grammar.productions)
-		{
-			if (prod.rule.size () > 0 && prod.rule.at (0).index == e_index)
-			{ e_prods[prod.var] = true; } }
-
-
-		// find firsts
-		bool isChanged = true;
-		// while (isChanged)
-		// {
-		// 	isChanged = false;
-		// 	for (auto [key, value] : grammar.variables)
-		// 	{
-		// 		if (key != e_index)
-		// 		{
-		// 			bool ret = FindFirst (key, var_productions, e_index, e_prods, firsts);
-		// 			if (ret == true) { isChanged = true; }
-		// 		}
-		// 	}
-		// }
-
-
-		// find follows
-		// 	follows.at (grammar.start_symbol).push_back (-1); // terminal symbol is -1 possibly?
-
-		for (auto [key, value] : grammar.variables)
-		{
-			FindFollow (key, var_productions, e_prods, follows);
-		}
-
-
-
-
-		index = 0;
-		for (auto &prod : grammar.productions)
-		{
-			if (prod.rule.at (0).isTerm)
-			{
-
-				int first_token_index = prod.rule.at (0).index;
-				int var_key = var_key_to_index.at (prod.var);
-
-				table.at (var_key).at (first_token_index).insert (index);
-			}
-			else
-			{
-
-				auto vec_indices = grammar.find_firsts_of_production (prod);
-				for (auto &ind : vec_indices)
-				{
-					int token_index = ind;
-					int var_key = var_key_to_index.at (prod.var);
-					table.at (var_key).at (token_index).insert (index);
-				}
-			}
-			index++;
-		}
 	}
-};
+	for (auto [key, value] : grammar.terminals)
+	{
+		e_prods[key] = false;
+	}
 
-void PrintGrammar (Grammar &grammar, OutputFileHandle &ofh)
+	// find all epsilon production variables
+	for (auto &prod : grammar.productions)
+	{
+		if (prod.rule.size () > 0 && prod.rule.at (0).index == e_index)
+		{ e_prods[prod.var] = true; } }
+
+
+	// find firsts
+	bool isChanged = true;
+	// while (isChanged)
+	// {
+	// 	isChanged = false;
+	// 	for (auto [key, value] : grammar.variables)
+	// 	{
+	// 		if (key != e_index)
+	// 		{
+	// 			bool ret = FindFirst (key, var_productions, e_index, e_prods, firsts);
+	// 			if (ret == true) { isChanged = true; }
+	// 		}
+	// 	}
+	// }
+
+
+	// find follows
+	// 	follows.at (grammar.start_symbol).push_back (-1); // terminal symbol is -1 possibly?
+
+	for (auto [key, value] : grammar.variables)
+	{
+		FindFollow (key, var_productions, e_prods, follows);
+	}
+
+	index = 0;
+	for (auto &prod : grammar.productions)
+	{
+		if (prod.rule.at (0).isTerm)
+		{
+
+			int first_token_index = prod.rule.at (0).index;
+			int var_key = var_key_to_index.at (prod.var);
+
+			table.at (var_key).at (first_token_index).insert (index);
+		}
+		else
+		{
+
+			auto vec_indices = grammar.find_firsts_of_production (prod);
+			for (auto &ind : vec_indices)
+			{
+				int token_index = ind;
+				int var_key = var_key_to_index.at (prod.var);
+				table.at (var_key).at (token_index).insert (index);
+			}
+		}
+		index++;
+	}
+}
+
+
+void Grammar::PrintGrammar (std::string out_file_name)
 {
+
+	OutputFileHandle ofh (out_file_name);
+
+
 	fmt::print (ofh.FP (), "TOKENS ");
-	for (auto &[key, term] : grammar.terminals)
+	for (auto &[key, term] : terminals)
 	{
 		fmt::print (ofh.FP (), "{} ", term);
 	}
 	fmt::print (ofh.FP (), "\n");
 
 
-	for (auto &prod : grammar.productions)
+	for (auto &prod : productions)
 	{
-		fmt::print (ofh.FP (), "{} ->\n\t", grammar.variables.at (prod.var));
+		fmt::print (ofh.FP (), "{} ->\n\t", variables.at (prod.var));
 		for (auto &token : prod.rule)
 		{
 			if (token.isTerm)
-				fmt::print (ofh.FP (), "{} ", grammar.terminals.at (token.index));
+				fmt::print (ofh.FP (), "{} ", terminals.at (token.index));
 			else
-				fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
+				fmt::print (ofh.FP (), "{} ", variables.at (token.index));
 		}
 		fmt::print (ofh.FP (), "\n\n");
 	}
 }
 
-void PrintParseTable (ParseTable &parse, OutputFileHandle &ofh)
+void ParseTable::PrintParseTable (std::string out_file_name)
 {
+	OutputFileHandle ofh (out_file_name);
+
 	fmt::print (ofh.FP (), "TOKENS, ");
-	for (auto [key, value] : parse.grammar.terminals)
+	for (auto [key, value] : grammar.terminals)
 	{
 		fmt::print (ofh.FP (), "\'{}\', ", value);
 	}
@@ -414,27 +336,26 @@ void PrintParseTable (ParseTable &parse, OutputFileHandle &ofh)
 
 
 	int i = 0;
-	for (auto [key, value] : parse.grammar.variables)
+	for (auto [key, value] : grammar.variables)
 	{
 		fmt::print (ofh.FP (), "{}, ", value);
-		for (auto &terms : parse.table.at (i))
+		for (auto &terms : table.at (i))
 		{
 			for (auto &index : terms)
 			{
-				fmt::print (ofh.FP (),
-				"{} -> ",
-				parse.grammar.variables.at (parse.grammar.productions.at (index).var));
-				for (auto &token : parse.grammar.productions.at (index).rule)
+				fmt::print (
+				ofh.FP (), "{} -> ", grammar.variables.at (grammar.productions.at (index).var));
+				for (auto &token : grammar.productions.at (index).rule)
 				{
 					if (token.isTerm)
 					{
-						if (parse.grammar.terminals.at (token.index) == ",")
+						if (grammar.terminals.at (token.index) == ",")
 							fmt::print (ofh.FP (), "\'comma\' ");
 						else
-							fmt::print (ofh.FP (), "\'{}\' ", parse.grammar.terminals[token.index]);
+							fmt::print (ofh.FP (), "\'{}\' ", grammar.terminals[token.index]);
 					}
 					else
-						fmt::print (ofh.FP (), "{} ", parse.grammar.variables.at (token.index));
+						fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
 				}
 				if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
 			}
@@ -445,14 +366,14 @@ void PrintParseTable (ParseTable &parse, OutputFileHandle &ofh)
 	}
 }
 
-void RemoveDuplicateProductions (Grammar &grammar)
+void Grammar::RemoveDuplicateProductions ()
 {
 	// copy old ones, and reinsert them, while checking if they are unique.
-	std::vector<Production> old_prods = grammar.productions;
-	grammar.productions.clear ();
+	std::vector<Production> old_prods = productions;
+	productions.clear ();
 	for (auto &prod : old_prods)
 	{
-		grammar.AddProduction (prod);
+		AddProduction (prod);
 	}
 }
 
@@ -512,32 +433,46 @@ std::vector<Production> PermuteProductionOnERemoval (Production prod, std::unord
 
 Grammar RemoveEProds (Grammar &grammar)
 {
-
-	std::unordered_set<Variable> e_vars;
-
-	// finds direct e prods
-	for (auto &prod : grammar.productions)
-	{
-		if (grammar.isEProd (prod.rule)) e_vars.insert (prod.var);
-	}
-
-
 	Grammar res_grammar = grammar;
 
+	std::unordered_set<Variable> e_vars;
+	std::vector<Production> e_prods;
 
-	for (auto &prod : grammar.productions)
+	// finds direct e prods
+	for (auto &prod : res_grammar.productions)
 	{
-		if (!grammar.isEProd (prod.rule))
+		if (res_grammar.isEProd (prod.rule))
 		{
-			auto new_prods = PermuteProductionOnERemoval (prod, e_vars);
-			if (new_prods.size () > 0)
-				res_grammar.productions.insert (
-				std::end (res_grammar.productions), std::begin (new_prods), std::end (new_prods));
-			else
-				res_grammar.productions.push_back (prod);
+			e_vars.insert (prod.var);
+			e_prods.push_back (prod);
 		}
 	}
-	RemoveDuplicateProductions (res_grammar);
+
+	std::vector<Production> contains_eProds;
+	for (auto &prod : res_grammar.productions)
+	{
+		bool contains_e;
+		for (auto &tok : prod.rule)
+		{
+			if (e_vars.count (tok.index)) contains_e = true;
+		}
+		if (contains_e) { contains_eProds.push_back (prod); }
+	}
+
+
+	for (auto &prod : contains_eProds)
+	{
+		auto new_prods = PermuteProductionOnERemoval (prod, e_vars);
+		if (new_prods.size () > 0)
+			res_grammar.productions.insert (
+			std::end (res_grammar.productions), std::begin (new_prods), std::end (new_prods));
+	}
+	for (auto &prod : e_prods)
+	{
+		res_grammar.EraseProduction (prod);
+	}
+
+	res_grammar.RemoveDuplicateProductions ();
 	return res_grammar;
 }
 
@@ -940,60 +875,34 @@ Grammar ReadGrammar (std::ifstream &in)
 	return grammar;
 }
 
-void MassageGrammar (std::string grammar_fileName)
+void MassageGrammar (std::string grammar_fileName, std::string out_name = std::string ("grammar_"))
 {
-	std::ifstream in2 ("simple.txt", std::ios::in);
-	if (!in2.is_open ()) { fmt::print ("failed to open {}\n", "grammars/simple.txt"); }
-	else
-	{
-		auto in_gram = ReadGrammar (in2);
-		auto e_less = RemoveEProds (in_gram);
-		auto ll_less_Grammar = RemoveLeftRecursion (e_less);
-		OutputFileHandle ofh_lr_less ("left_recursive_less_simple.txt");
-		PrintGrammar (ll_less_Grammar, ofh_lr_less);
-
-		auto factored_Grammar = RemoveXLeftFactoring (ll_less_Grammar);
-		OutputFileHandle ofh_factoring ("simple_factored_full.txt");
-		PrintGrammar (factored_Grammar, ofh_factoring);
-
-
-		auto p = ParseTable (factored_Grammar);
-		OutputFileHandle ofh_parse_table ("simple_ParseTable.txt");
-		PrintParseTable (p, ofh_parse_table);
-	}
-
 	std::ifstream in (grammar_fileName, std::ios::in);
 	if (!in.is_open ()) { fmt::print ("failed to open {}\n", grammar_fileName); }
 	else
 	{
+		using namespace std::string_literals;
+
 		auto grammar = ReadGrammar (in);
-		OutputFileHandle ofh_orig ("massaged.txt");
-		PrintGrammar (grammar, ofh_orig);
+		grammar.PrintGrammar (out_name + "_original.txt"s);
 
 		auto eLess_Grammar = RemoveEProds (grammar);
-		OutputFileHandle ofh_e_less ("e_less.txt");
-		PrintGrammar (eLess_Grammar, ofh_e_less);
+		eLess_Grammar.PrintGrammar (out_name + "_epsilon.txt"s);
 
 		auto ll_less_Grammar = RemoveLeftRecursion (eLess_Grammar);
-		OutputFileHandle ofh_lr_less ("left_recursive_less_full.txt");
-		PrintGrammar (ll_less_Grammar, ofh_lr_less);
-
-		auto temp_parse_table = ParseTable (ll_less_Grammar);
-		OutputFileHandle ofh_parse_table_temp ("partial_parse_table.txt");
-		PrintParseTable (temp_parse_table, ofh_parse_table_temp);
+		ll_less_Grammar.PrintGrammar (out_name + "_left_recursion.txt"s);
 
 		auto factored_Grammar = RemoveXLeftFactoring (ll_less_Grammar);
-		OutputFileHandle ofh_factoring ("factored_full.txt");
-		PrintGrammar (factored_Grammar, ofh_factoring);
+		factored_Grammar.PrintGrammar (out_name + "_factored.txt"s);
 
 		auto parse_table = ParseTable (factored_Grammar);
-		OutputFileHandle ofh_parse_table ("parse_table.txt");
-		PrintParseTable (parse_table, ofh_parse_table);
+		parse_table.PrintParseTable (out_name + "_parse_table.txt"s);
 	}
 }
 
 int main ()
 {
-	MassageGrammar ("grammars/grammar_modified.txt");
+	MassageGrammar ("grammars/simple.txt", "simple");
+	MassageGrammar ("grammars/grammar_modified.txt", "pascal");
 	return 0;
 }

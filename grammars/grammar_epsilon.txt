@@ -1,0 +1,99 @@
+//without e productions
+TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + - if then else while do .. 
+
+
+0. program_statement -> 
+0.0	    program id ( identifier_list ) ; declarations subprogram_declarations compound_statement .
+0.1	    program id ( identifier_list ) ; declarations compound_statement .
+0.2	    program id ( identifier_list ) ; subprogram_declarations compound_statement .
+0.3     program id ( identifier_list ) ; compound_statement .
+
+1. identifier_list ->
+    id
+    identifier_list , id
+
+2. declarations ->
+   declarations var id : type ;
+
+3. type ->
+    standard_type
+    array [ num .. num ] of standard_type
+
+4. standard_type ->
+    integer
+    real
+
+5. subprogram_declarations ->
+    subprogram_declarations subprogram_declaration ;
+
+6. subprogram_declaration ->
+6.0    subprogram_head declarations subprogram_declarations compound_statement
+6.1    subprogram_head declarations compound_statement
+6.2    subprogram_head subprogram_declarations compound_statement
+6.3    subprogram_head compound_statement
+
+7. subprogram_head ->
+7.0   procedure id arguments ;
+7.1	procedure id ;
+
+8. arguments ->
+    ( parameter_list )
+
+9. parameter_list ->
+    id : type
+    parameter_list ; id : type
+
+10. compound_statement ->
+10.0    begin optional_statements end
+10.1	begin end
+
+11. optional_statements ->
+    statement_list
+
+12. statement_list ->
+    statement
+    statement_list ; statement
+
+13. statement ->
+    variable assignop expression
+    procedure_statement
+    compound_statement
+    if expression then statement else statement
+	if expression then statement
+    while expression do statement
+
+14. variable ->
+    id
+    id [ expression ]
+
+15. procedure_statement ->
+    call id
+    call id ( expression_list )
+
+16. expression_list ->
+    expression
+    expression_list , expression
+
+17. expression ->
+    simple_expression
+    simple_expression relop simple_expression
+
+18. simple_expression ->
+    term
+    sign term
+    simple_expression addop term
+
+19. term ->
+    factor
+    term mulop factor
+
+20. factor ->
+    id
+    num
+    ( expression )
+    not factor
+
+21. sign ->
+    +
+    -
+

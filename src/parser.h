@@ -2,28 +2,18 @@
 
 #include "lexer.h"
 
+#include "grammar_massager.h"
 
-class AST_root
+struct AST_root
 {
-    
-
 };
 
-
-
-
-
-
-
-class Parser {
-public:
-    AST_root CreateAST(TokenStream& stream);
-
-
-
-private:
-
-
-
-
+struct Expression : AST_root
+{
 };
+
+struct Statement : AST_root
+{
+};
+
+struct
