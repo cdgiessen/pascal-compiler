@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stack>
 #include <functional>
 
 #include "lexer.h"
@@ -32,7 +33,7 @@ struct Func{
 
 
 
-	std::vector<std::function<void()>> funcs;
+	std::vector<std::function<void(TokenStream& ts)>> funcs;
 
 };
 
@@ -45,7 +46,7 @@ TokenType FromTerminalIndex();
 
 class ParserGenerator {
 public:
-	ParserGenerator(ParseTable table );
+	ParserGenerator(ParseTable table);
 private:
 
 	TokenType FromTerminalIndex();
@@ -55,8 +56,8 @@ private:
 
 class Parser {
 public:
-	Parser(TokenStream ts, ParserGenerator pg);
+	Parser(ParserGenerator pg);
 private:
-
+	void Parse(TokenStream ts);
 
 };

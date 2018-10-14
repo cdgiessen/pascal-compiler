@@ -185,114 +185,8 @@ void FindFollow (Variable key,
 std::map<int, std::vector<Production>> &var_productions,
 std::map<int, bool> &e_prods,
 std::map<int, std::vector<int>> &follows)
-{
+{ 
 }
-
-ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
-{
-	table = std::vector<std::vector<std::set<int>>> (
-	grammar.variables.size (), std::vector<std::set<int>> (grammar.terminals.size ()));
-	// grammar.ReorderProductionsByVariable ();
-	int e_index = grammar.find_epsilon_index ();
-
-	// map var keys to 0 based index. not sure if necessary if I just make everything maps...
-	int index = 0;
-	for (auto &[key, value] : grammar.variables)
-
-		var_key_to_index[key] = index++;
-
-	// pre-bucket all the productions per key. Just removes needless searching in first
-	// calculation which could be heavily recursive...
-	std::map<int, std::vector<Production>> var_productions;
-	for (auto &prod : grammar.productions)
-	{
-		if (prod.var != e_index) // stupid special cases
-			var_productions[prod.var].push_back (prod);
-	}
-
-	std::map<int, std::vector<int>> firsts;
-	std::map<int, std::vector<int>> follows;
-
-
-
-	// find symbols with e prods - first need to fill out map with false values
-	std::map<int, bool> e_prods;
-	for (auto [key, value] : grammar.variables)
-	{
-		if (key == e_index)
-		{
-			e_prods[key] = true; // special case gone wrong....
-		}
-		else
-		{
-
-			firsts[key] = std::vector<int> (); // should be enough to initialize them right?
-			follows[key] = std::vector<int> ();
-			e_prods[key] = false;
-		}
-	}
-	for (auto [key, value] : grammar.terminals)
-	{
-		e_prods[key] = false;
-	}
-
-	// find all epsilon production variables
-	for (auto &prod : grammar.productions)
-	{
-		if (prod.rule.size () > 0 && prod.rule.at (0).index == e_index)
-		{ e_prods[prod.var] = true; } }
-
-
-	// find firsts
-	bool isChanged = true;
-	// while (isChanged)
-	// {
-	// 	isChanged = false;
-	// 	for (auto [key, value] : grammar.variables)
-	// 	{
-	// 		if (key != e_index)
-	// 		{
-	// 			bool ret = FindFirst (key, var_productions, e_index, e_prods, firsts);
-	// 			if (ret == true) { isChanged = true; }
-	// 		}
-	// 	}
-	// }
-
-
-	// find follows
-	// 	follows.at (grammar.start_symbol).push_back (-1); // terminal symbol is -1 possibly?
-
-	for (auto [key, value] : grammar.variables)
-	{
-		FindFollow (key, var_productions, e_prods, follows);
-	}
-
-	index = 0;
-	for (auto &prod : grammar.productions)
-	{
-		if (prod.rule.at (0).isTerm)
-		{
-
-			int first_token_index = prod.rule.at (0).index;
-			int var_key = var_key_to_index.at (prod.var);
-
-			table.at (var_key).at (first_token_index).insert (index);
-		}
-		else
-		{
-
-			auto vec_indices = grammar.find_firsts_of_production (prod);
-			for (auto &ind : vec_indices)
-			{
-				int token_index = ind;
-				int var_key = var_key_to_index.at (prod.var);
-				table.at (var_key).at (token_index).insert (index);
-			}
-		}
-		index++;
-	}
-}
-
 
 void Grammar::PrintGrammar (std::string out_file_name)
 {
@@ -319,53 +213,6 @@ void Grammar::PrintGrammar (std::string out_file_name)
 				fmt::print (ofh.FP (), "{} ", variables.at (token.index));
 		}
 		fmt::print (ofh.FP (), "\n\n");
-	}
-}
-
-void ParseTable::PrintParseTable (std::string out_file_name)
-{
-	OutputFileHandle ofh (out_file_name);
-
-	fmt::print (ofh.FP (), "TOKENS, ");
-	for (auto [key, value] : grammar.terminals)
-	{
-		fmt::print (ofh.FP (), "\'{}\', ", value);
-	}
-	fmt::print (ofh.FP (), "\n");
-
-
-	int i = 0;
-	for (auto [key, value] : grammar.variables)
-	{
-		if (value != "e")
-		{ // don't print a row for the epsilon symbol
-			fmt::print (ofh.FP (), "{}, ", value);
-
-			for (auto &terms : table.at (i))
-			{
-				for (auto &index : terms)
-				{
-					fmt::print (
-					ofh.FP (), "{} -> ", grammar.variables.at (grammar.productions.at (index).var));
-					for (auto &token : grammar.productions.at (index).rule)
-					{
-						if (token.isTerm)
-						{
-							if (grammar.terminals.at (token.index) == ",")
-								fmt::print (ofh.FP (), "\'comma\' ");
-							else
-								fmt::print (ofh.FP (), "\'{}\' ", grammar.terminals[token.index]);
-						}
-						else
-							fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
-					}
-					if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
-				}
-				fmt::print (ofh.FP (), ", ");
-			}
-			fmt::print (ofh.FP (), "\n");
-		}
-		i++;
 	}
 }
 
@@ -899,7 +746,163 @@ void MassageGrammar (std::string grammar_fileName, std::string out_name = std::s
 		factored_Grammar.PrintGrammar (out_name + "_factored.txt"s);
 
 		auto parse_table = ParseTable (factored_Grammar);
-		parse_table.PrintParseTable (out_name + "_parse_table.txt"s);
+		parse_table.PrettyPrintParseTableCSV(out_name + "_parse_table.txt"s);
+	}
+}
+
+
+ParseTable::ParseTable(Grammar &grammar) : grammar(grammar)
+{
+	table = std::vector<std::vector<std::set<int>>>(
+		grammar.variables.size(), std::vector<std::set<int>>(grammar.terminals.size()));
+	// grammar.ReorderProductionsByVariable ();
+	int e_index = grammar.find_epsilon_index();
+
+	// map var keys to 0 based index. not sure if necessary if I just make everything maps...
+	int index = 0;
+	for (auto &[key, value] : grammar.variables)
+
+		var_key_to_index[key] = index++;
+
+	// pre-bucket all the productions per key. Just removes needless searching in first
+	// calculation which could be heavily recursive...
+	std::map<int, std::vector<Production>> var_productions;
+	for (auto &prod : grammar.productions)
+	{
+		if (prod.var != e_index) // stupid special cases
+			var_productions[prod.var].push_back(prod);
+	}
+
+	std::map<int, std::vector<int>> firsts;
+	std::map<int, std::vector<int>> follows;
+
+
+
+	// find symbols with e prods - first need to fill out map with false values
+	std::map<int, bool> e_prods;
+	for (auto[key, value] : grammar.variables)
+	{
+		if (key == e_index)
+		{
+			e_prods[key] = true; // special case gone wrong....
+		}
+		else
+		{
+
+			firsts[key] = std::vector<int>(); // should be enough to initialize them right?
+			follows[key] = std::vector<int>();
+			e_prods[key] = false;
+		}
+	}
+	for (auto[key, value] : grammar.terminals)
+	{
+		e_prods[key] = false;
+	}
+
+	// find all epsilon production variables
+	for (auto &prod : grammar.productions)
+	{
+		if (prod.rule.size() > 0 && prod.rule.at(0).index == e_index)
+		{
+			e_prods[prod.var] = true;
+		}
+	}
+
+
+	// find firsts
+	bool isChanged = true;
+	// while (isChanged)
+	// {
+	// 	isChanged = false;
+	// 	for (auto [key, value] : grammar.variables)
+	// 	{
+	// 		if (key != e_index)
+	// 		{
+	// 			bool ret = FindFirst (key, var_productions, e_index, e_prods, firsts);
+	// 			if (ret == true) { isChanged = true; }
+	// 		}
+	// 	}
+	// }
+
+
+	// find follows
+	// 	follows.at (grammar.start_symbol).push_back (-1); // terminal symbol is -1 possibly?
+
+	for (auto[key, value] : grammar.variables)
+	{
+		FindFollow(key, var_productions, e_prods, follows);
+	}
+
+	index = 0;
+	for (auto &prod : grammar.productions)
+	{
+		if (prod.rule.at(0).isTerm)
+		{
+
+			int first_token_index = prod.rule.at(0).index;
+			int var_key = var_key_to_index.at(prod.var);
+
+			table.at(var_key).at(first_token_index).insert(index);
+		}
+		else
+		{
+
+			auto vec_indices = grammar.find_firsts_of_production(prod);
+			for (auto &ind : vec_indices)
+			{
+				int token_index = ind;
+				int var_key = var_key_to_index.at(prod.var);
+				table.at(var_key).at(token_index).insert(index);
+			}
+		}
+		index++;
+	}
+}
+
+void ParseTable::PrettyPrintParseTableCSV(std::string out_file_name)
+{
+	OutputFileHandle ofh(out_file_name);
+
+	fmt::print(ofh.FP(), "TOKENS, ");
+	for (auto[key, value] : grammar.terminals)
+	{
+		fmt::print(ofh.FP(), "\'{}\', ", value);
+	}
+	fmt::print(ofh.FP(), "\n");
+
+
+	int i = 0;
+	for (auto[key, value] : grammar.variables)
+	{
+		if (value != "e")
+		{ // don't print a row for the epsilon symbol
+			fmt::print(ofh.FP(), "{}, ", value);
+
+			for (auto &terms : table.at(i))
+			{
+				for (auto &index : terms)
+				{
+					fmt::print(
+						ofh.FP(), "{} -> ", grammar.variables.at(grammar.productions.at(index).var));
+					for (auto &token : grammar.productions.at(index).rule)
+					{
+						if (token.isTerm)
+						{
+							if (grammar.terminals.at(token.index) == ",")
+								fmt::print(ofh.FP(), "\'comma\' ");
+							else
+								fmt::print(ofh.FP(), "\'{}\' ", grammar.terminals[token.index]);
+						}
+						else
+							fmt::print(ofh.FP(), "{} ", grammar.variables.at(token.index));
+					}
+					if (terms.size() > 1) fmt::print(ofh.FP(), "| ");
+				}
+				fmt::print(ofh.FP(), ", ");
+			}
+			fmt::print(ofh.FP(), "\n");
+		}
+		i++;
 	}
 }
 
