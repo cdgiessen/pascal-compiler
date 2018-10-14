@@ -8,9 +8,9 @@ endif(MSVC)
 
 add_subdirectory(fmt)
 
-add_executable(lexer src/lexer.cpp src/parser.cpp) 
+add_executable(compiler src/main.cpp src/lexer.cpp src/parser.cpp) 
 
-target_link_libraries(lexer PUBLIC fmt)
+target_link_libraries(compiler PUBLIC fmt)
 
 
 add_executable(massager src/grammar_massager.cpp) 
@@ -20,16 +20,16 @@ target_link_libraries(massager PUBLIC fmt)
 
 
 add_custom_command(
-        TARGET lexer POST_BUILD
+        TARGET compiler POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_SOURCE_DIR}/test_input
                 ${CMAKE_CURRENT_BINARY_DIR}/test_input)
 
-add_custom_command(TARGET lexer POST_BUILD
+add_custom_command(TARGET compiler POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		${PROJECT_SOURCE_DIR}/test_input $<TARGET_FILE_DIR:lexer>/test_input)
+		${PROJECT_SOURCE_DIR}/test_input $<TARGET_FILE_DIR:compiler>/test_input)
 
 add_custom_command(TARGET massager POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${PROJECT_SOURCE_DIR}/grammars $<TARGET_FILE_DIR:lexer>/grammars)
+        ${PROJECT_SOURCE_DIR}/grammars $<TARGET_FILE_DIR:massager>/grammars)
     

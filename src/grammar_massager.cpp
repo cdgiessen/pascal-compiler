@@ -1,4 +1,3 @@
-
 #include "grammar_massager.h"
 
 void Grammar::AddProduction (Production p)
@@ -338,30 +337,34 @@ void ParseTable::PrintParseTable (std::string out_file_name)
 	int i = 0;
 	for (auto [key, value] : grammar.variables)
 	{
-		fmt::print (ofh.FP (), "{}, ", value);
-		for (auto &terms : table.at (i))
-		{
-			for (auto &index : terms)
+		if (value != "e")
+		{ // don't print a row for the epsilon symbol
+			fmt::print (ofh.FP (), "{}, ", value);
+
+			for (auto &terms : table.at (i))
 			{
-				fmt::print (
-				ofh.FP (), "{} -> ", grammar.variables.at (grammar.productions.at (index).var));
-				for (auto &token : grammar.productions.at (index).rule)
+				for (auto &index : terms)
 				{
-					if (token.isTerm)
+					fmt::print (
+					ofh.FP (), "{} -> ", grammar.variables.at (grammar.productions.at (index).var));
+					for (auto &token : grammar.productions.at (index).rule)
 					{
-						if (grammar.terminals.at (token.index) == ",")
-							fmt::print (ofh.FP (), "\'comma\' ");
+						if (token.isTerm)
+						{
+							if (grammar.terminals.at (token.index) == ",")
+								fmt::print (ofh.FP (), "\'comma\' ");
+							else
+								fmt::print (ofh.FP (), "\'{}\' ", grammar.terminals[token.index]);
+						}
 						else
-							fmt::print (ofh.FP (), "\'{}\' ", grammar.terminals[token.index]);
+							fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
 					}
-					else
-						fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
+					if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
 				}
-				if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
+				fmt::print (ofh.FP (), ", ");
 			}
-			fmt::print (ofh.FP (), ", ");
+			fmt::print (ofh.FP (), "\n");
 		}
-		fmt::print (ofh.FP (), "\n");
 		i++;
 	}
 }
@@ -451,7 +454,7 @@ Grammar RemoveEProds (Grammar &grammar)
 	std::vector<Production> contains_eProds;
 	for (auto &prod : res_grammar.productions)
 	{
-		bool contains_e;
+		bool contains_e = false;
 		for (auto &tok : prod.rule)
 		{
 			if (e_vars.count (tok.index)) contains_e = true;

@@ -1,6 +1,9 @@
 //original grammar
+
+//terminals 
 TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + - if then else while do .. 
 
+//non terminals & productions
 
 program_statement -> 
     program id ( identifier_list ) ; declarations subprogram_declarations compound_statement .

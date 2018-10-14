@@ -21,6 +21,8 @@
 #include <fmt/ostream.h>
 
 #include "enumstring.h"
+#include "OutputFileHandler.h"
+
 
 constexpr int line_buffer_length = 72;
 constexpr int identifier_length = 10;
@@ -42,54 +44,47 @@ using ProgramLine = std::string_view;
 // std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
 
 
-enum class TokenType
-{
+enum class TokenType {
 	PROGRAM,
 	ID,
-	STANDARD_TYPE,
+	PAREN_OPEN,
+	PAREN_CLOSE,
+	SEMICOLON,
+	DOT,
+	VARIABLE,
+	COLON,
+	ARRAY,
+	BRACKET_OPEN,
+	BRACKET_CLOSE,
+	NUM,
+	OF,
 	INTEGER,
 	REAL,
-	FUNCTION,
 	PROCEDURE,
-	ASSIGNOP,
-	VARIABLE,
-	ARRAY,
-	RELOP,
-	ADDOP,
-	MULOP,
-	SIGN,
 	BEGIN,
 	END,
+	CALL,
+	COMMA,
+	RELOP,
+	ADDOP,
+	ASSIGNOP,
+	MULOP,
 	NOT,
-	OF,
+	SIGN,
 	IF,
 	THEN,
 	ELSE,
 	WHILE,
 	DO,
-	PAREN_OPEN,
-	PAREN_CLOSE,
-	SEMICOLON,
-	DOT,
-	COMMA,
-	COLON,
-	BRACKET_OPEN,
-	BRACKET_CLOSE,
 	DOT_DOT,
-	STR_LIT,
 	END_FILE,
 	LEXERR,
 };
 
+
 struct NoAttrib
 {
 	friend std::ostream &operator<< (std::ostream &os, const NoAttrib &t) { return os << "(NULL)"; }
-};
-
-enum class StandardEnum
-{
-	integer,
-	real
 };
 
 struct SymbolType
@@ -210,7 +205,7 @@ struct LexerError
 };
 
 using TokenAttribute =
-std::variant<NoAttrib, StandardEnum, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, IntType, FloatType, SymbolType, StringLiteral, LexerError>;
+std::variant<NoAttrib, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, IntType, FloatType, SymbolType, StringLiteral, LexerError>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
 
@@ -218,15 +213,15 @@ struct TokenInfo
 {
 	TokenType type;
 	TokenAttribute attrib;
-	int line_location = -1;
-	int column_location = -1;
+	//int line_location = -1;
+	//int column_location = -1;
 
 	TokenInfo (TokenType type, TokenAttribute attrib) : type (type), attrib (attrib) {}
 
-	TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
-	: type (type), attrib (attrib), line_location (line), column_location (column)
-	{
-	}
+	//TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
+	//: type (type), attrib (attrib), line_location (line), column_location (column)
+	//{
+	//}
 
 	friend std::ostream &operator<< (std::ostream &os, const TokenInfo &t)
 	{
@@ -240,7 +235,7 @@ struct ReservedWord
 	TokenType type;
 	TokenAttribute attrib;
 
-	ReservedWord (std::string word, TokenType type, TokenAttribute attrib)
+	ReservedWord (std::string word, TokenType type, TokenAttribute attrib = NoAttrib{})
 	: word (word), type (type), attrib (attrib){};
 
 	bool operator== (const ReservedWord &other) const
@@ -263,23 +258,6 @@ template <> struct hash<ReservedWord>
 } // namespace std
 
 using ReservedWordList = std::unordered_set<ReservedWord>;
-
-class OutputFileHandle
-{
-	public:
-	OutputFileHandle (std::string file_name)
-	{
-		fp = std::fopen (file_name.c_str (), "w");
-		if (!fp) { fmt::print ("File opening failed"); }
-	}
-
-	~OutputFileHandle () { std::fclose (fp); }
-
-	FILE *FP () const { return fp; };
-
-	private:
-	FILE *fp = nullptr;
-};
 
 class SymbolTable
 {
@@ -348,13 +326,18 @@ struct LexerMachine
 	: name (name), precedence (precedence), machine (machine){};
 };
 
-struct TokenStream
+class TokenStream
 {
+public:
 	TokenStream (std::vector<TokenInfo> tokens, SymbolTable symbolTable)
 	: tokens (tokens), symbolTable (symbolTable)
 	{
 	}
 
+	TokenInfo GetNextToken();
+
+private:
+	int index = 0;
 	std::vector<TokenInfo> tokens;
 	SymbolTable symbolTable;
 };
@@ -383,3 +366,10 @@ class Lexer
 	OutputFileHandle listing_file;
 	OutputFileHandle token_file;
 };
+
+
+std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
+std::optional<ReservedWord> GetReservedWord(std::string s);
+
+ReservedWordList ReadReservedWordsFile();
+std::optional<TokenInfo> CheckReseredWords(ReservedWordList &list, std::string_view s);
