@@ -30,8 +30,8 @@
 //}
 
 
-using signature_production = std::function < void(TokenStream &ts);
-using signature_match = std::function < void(TokenStream &ts, TokenType);
+using signature_production = std::function < void(TokenStream &ts)>;
+using signature_match = std::function < void(TokenStream &ts, TokenType t)>;
 
 struct ProductionSignature
 {
@@ -47,11 +47,10 @@ struct ProductionGroup
 	std::vector<ProductionSignature> signatures;
 
 	void operator() (TokenStream &ts) { TokenType t = ts.GetNextToken (); }
-}
+};
 
 
-TokenType
-FromTerminalIndex ();
+TokenType FromTerminalIndex ();
 class ParserGenerator
 {
 	public:

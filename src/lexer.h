@@ -72,6 +72,7 @@ enum class TokenType
 	MULOP,
 	NOT,
 	SIGN,
+	JUST_PADDING_FOR_NEG_SIGN,
 	IF,
 	THEN,
 	ELSE,

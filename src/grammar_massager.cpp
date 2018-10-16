@@ -52,6 +52,16 @@ int Grammar::find_epsilon_index () const
 	return e_index;
 }
 
+int Grammar::find_eof_index () const
+{
+	int eof_index = -1;
+	for (auto [key, value] : terminals)
+	{
+		if (value == "$") eof_index = key;
+	}
+	return eof_index;
+}
+
 void Grammar::ReorderProductionsByVariable ()
 {
 	auto old_prods = productions;
@@ -138,18 +148,16 @@ void Grammar::PrintGrammar (std::string out_file_name)
 	int var_index = 0;
 	for (auto &[var, var_string] : variables)
 	{
-		if(var_string == "e") continue; //special case
-		int prod_index = 0;
+		if (var_string == "e") continue; // special case
 
 		fmt::print (ofh.FP (), "({}) {} ->\n\t", std::to_string (var_index), var_string);
 
-		for (auto &prod : productions)
+		for (int i = 0; i < productions.size (); i++)
 		{
-			if (prod.var == var)
+			if (productions.at (i).var == var)
 			{
-				fmt::print (
-				ofh.FP (), "({})\t", std::to_string (var_index) + "." + std::to_string (prod_index++));
-				for (auto &token : prod.rule)
+				fmt::print (ofh.FP (), "({})\t", std::to_string (var_index) + "." + std::to_string (i));
+				for (auto &token : productions.at (i).rule)
 				{
 					if (token.isTerm)
 						fmt::print (ofh.FP (), "{} ", terminals.at (token.index));
@@ -160,7 +168,7 @@ void Grammar::PrintGrammar (std::string out_file_name)
 			}
 		}
 		var_index++;
-		fmt::print(ofh.FP(), "\n");
+		fmt::print (ofh.FP (), "\n");
 	}
 }
 
@@ -347,11 +355,11 @@ Grammar RemoveLeftRecursion (Grammar &eLess_Grammar)
 		{
 			if (priority == cur_value) index = cur_key;
 		}
-		if (index == -1)
+		/*if (index == -1)
 		{
 			fmt::print ("OH NO");
 			fmt::print ("OH NO");
-		}
+		}*/
 		fmt::print ("On iteration {}\n", priority);
 
 		bool keepSorting = true;
@@ -589,6 +597,9 @@ Grammar ReadGrammar (std::ifstream &in)
 				s >> str;
 				if (str.length () > 0) grammar.terminals[grammar.index++] = str;
 			}
+
+			// add a "EOF" terminal
+			grammar.terminals[grammar.index++] = "$";
 		}
 		else if (line.size () > 0 && !isReadingProductionList)
 		{
@@ -698,14 +709,15 @@ void FirstsAndFollows::FindFirsts ()
 	// get all the terminals first
 	for (auto &prod : grammar.productions)
 	{
+		// 2. If X -> e is a production, then add e to FIRST(X).
 		if (grammar.isEProd (prod.rule))
 		{
-			firsts.at (prod.var).insert (epsilon);
+			firsts[prod.var].insert (epsilon);
 			e_vars.insert (prod.var);
 		}
-
+		// 1. If X is terminal, then FIRST(X) is {X}.
 		if (prod.rule.size () > 0 && prod.rule.at (0).isTerm)
-		{ firsts.at (prod.var).insert (prod.rule.at (0).index); } }
+		{ firsts[prod.var].insert (prod.rule.at (0).index); } }
 
 
 	bool hasChanged = true;
@@ -718,15 +730,14 @@ void FirstsAndFollows::FindFirsts ()
 			bool FailedEarly = false;
 			for (auto &token : prod.rule)
 			{
-				if (e_vars.count (token.index) == 1)
+				int size = firsts.size ();
+				if (firsts.count (token.index) == 1)
 				{
-					int size = firsts.size ();
-					firsts.at (prod.var).insert (
+					firsts[prod.var].insert (
 					std::begin (firsts.at (token.index)), std::end (firsts.at (token.index)));
-
-					if (size != firsts.size ()) hasChanged = true; // loop until it doesn't change
 				}
-				else
+				if (size != firsts.size ()) hasChanged = true; // loop until it doesn't change
+				if (e_vars.count (token.index) != 1)
 				{
 					FailedEarly = true;
 					break; // stop looping
@@ -735,7 +746,7 @@ void FirstsAndFollows::FindFirsts ()
 			if (!FailedEarly)
 			{
 				int size = firsts.size ();
-				firsts.at (prod.var).insert (epsilon);
+				firsts[prod.var].insert (epsilon);
 				if (size != firsts.size ()) hasChanged = true; // loop until it doesn't change}
 			}
 		}
@@ -750,17 +761,110 @@ void FirstsAndFollows::FindFirsts ()
 */
 void FirstsAndFollows::FindFollows ()
 {
+	// 1. Place $ in FOLLOW(S), where S is the start symbol and $ is the input right endmarker.
+	int eof = grammar.find_eof_index ();
+	int epsilon_index = grammar.find_epsilon_index ();
+	follows[grammar.start_symbol].insert (eof);
 
 	for (auto &prod : grammar.productions)
 	{
-		for (auto &[key, value] : firsts)
+		// 2. If there is a production A — > aBB', then everything in FIRST(B') except for
+		// e is placed in FOLLOW(B).
+		int size = prod.rule.size ();
+		if (size > 1 && !prod.rule.at (size - 1).isTerm && !prod.rule.at (size - 2).isTerm)
 		{
-			for (auto &tok : value)
+			if (firsts.count (prod.rule.at (size - 1).index) == 1)
 			{
-				// if (value)
+
+				for (auto &a : firsts.at (prod.rule.at (size - 1).index))
+				{
+					if (a != epsilon_index) follows[prod.rule.at (size - 2).index].insert (a);
+				}
 			}
 		}
 	}
+	// 3. If there is a production A — > aB, or a production A->aBB' where
+	//	FIRST(B') contains e (i.e., B =*> e), then everything in FOLLOW(A)) is in FOLLOW(B).
+
+	bool hasChanged = true;
+	while (hasChanged)
+	{
+		hasChanged = false;
+
+		for (auto &prod : grammar.productions)
+		{
+			if (prod.rule.size () > 0 && !prod.rule.back ().isTerm)
+			{
+				int size = follows.size ();
+				if (follows.count (prod.var) == 1)
+				{
+
+					follows[prod.rule.back ().index].insert (
+					std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
+
+					bool contains_e = false;
+					if (firsts.count (prod.rule.back ().index) == 1)
+					{
+						for (auto &item : firsts.at (prod.rule.back ().index))
+						{
+							if (item == epsilon_index) contains_e = true;
+						}}
+						if (contains_e)
+						{
+							if (prod.rule.size () > 1 && !prod.rule.at (prod.rule.size () - 2).isTerm)
+								follows[prod.rule.at (prod.rule.size () - 2).index].insert (
+								std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
+						}
+					
+				}
+				if (size != follows.size ()) hasChanged = true;
+			}
+		}
+	}
+}
+
+void FirstsAndFollows::Print (std::string outFileName)
+{
+	OutputFileHandle ofh (outFileName);
+
+	fmt::print (ofh.FP (), "---Firsts---\n");
+	for (auto [key, set] : firsts)
+	{
+		fmt::print (ofh.FP (), "{} {}", grammar.variables.at (key), "{");
+		int index = 0;
+		for (auto &val : set)
+		{
+			if (grammar.variables.count (val) == 1)
+			{ fmt::print (ofh.FP (), "{}", grammar.variables.at (val)); }
+			else if (grammar.terminals.count (val) == 1)
+			{
+				fmt::print (ofh.FP (), "'{}'", grammar.terminals.at (val));
+			}
+			if (index++ != set.size () - 1) fmt::print (ofh.FP (), ", ");
+		}
+		fmt::print (ofh.FP (), "{}\n", "}");
+	}
+	fmt::print (ofh.FP (), "\n");
+
+
+	fmt::print (ofh.FP (), "\n---Follows---\n");
+	for (auto [key, set] : follows)
+	{
+		fmt::print (ofh.FP (), "{} {}", grammar.variables.at (key), "{");
+		int index = 0;
+		for (auto &val : set)
+		{
+			if (grammar.variables.count (val) == 1)
+			{ fmt::print (ofh.FP (), "{}", grammar.variables.at (val)); }
+			else if (grammar.terminals.count (val) == 1)
+			{
+				fmt::print (ofh.FP (), "'{}'", grammar.terminals.at (val));
+			}
+			if (index++ != set.size () - 1) fmt::print (ofh.FP (), ", ");
+		}
+		fmt::print (ofh.FP (), "{}\n", "}");
+	}
+	fmt::print (ofh.FP (), "\n");
 }
 
 /*
@@ -770,7 +874,8 @@ void FirstsAndFollows::FindFollows ()
 FOLLOW(A). If e is in FIRST(a) and $ is in FOLLOW(A), add A -> a to [A, $].
 4. Make each undefined entry of M be error.
 */
-ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
+
+ParseTable::ParseTable (Grammar &grammar) : grammar (grammar), firstAndFollows (grammar)
 {
 	table = std::vector<std::vector<std::set<int>>> (
 	grammar.variables.size (), std::vector<std::set<int>> (grammar.terminals.size ()));
@@ -826,7 +931,7 @@ ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
 
 
 	// find firsts
-	bool isChanged = true;
+	// bool isChanged = true;
 	// while (isChanged)
 	// {
 	// 	isChanged = false;
@@ -875,7 +980,7 @@ ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
 	}
 }
 
-void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
+void ParseTable::PrintParseTableCSV (std::string out_file_name)
 {
 	OutputFileHandle ofh (out_file_name);
 
@@ -890,12 +995,49 @@ void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
 	int i = 0;
 	for (auto [key, value] : grammar.variables)
 	{
+		if (value == "e") continue; // special case
+		fmt::print (ofh.FP (), "{}, ", value);
+
+		for (auto &terms : table.at (i))
+		{
+			for (auto &index : terms)
+			{
+				fmt::print (ofh.FP (), "{}", index);
+				if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
+			}
+			fmt::print (ofh.FP (), ", ");
+		}
+		fmt::print (ofh.FP (), "\n");
+
+		i++;
+	}
+}
+
+void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
+{
+	OutputFileHandle ofh (out_file_name);
+
+	fmt::print (ofh.FP (), "TOKENS, ");
+	for (auto [key, value] : grammar.terminals)
+	{
+		if (value == ",")
+			fmt::print (ofh.FP (), "\'comma\' ");
+		else
+			fmt::print (ofh.FP (), "\'{}\', ", value);
+	}
+	fmt::print (ofh.FP (), "\n");
+
+
+	int i = 0;
+	for (auto [key, value] : grammar.variables)
+	{
 		if (value != "e")
 		{ // don't print a row for the epsilon symbol
 			fmt::print (ofh.FP (), "{}, ", value);
 
 			for (auto &terms : table.at (i))
 			{
+				int count_index = 0;
 				for (auto &index : terms)
 				{
 					fmt::print (
@@ -912,7 +1054,7 @@ void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
 						else
 							fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
 					}
-					if (terms.size () > 1) fmt::print (ofh.FP (), "| ");
+					if (count_index++ != terms.size () - 1) fmt::print (ofh.FP (), "| ");
 				}
 				fmt::print (ofh.FP (), ", ");
 			}
@@ -943,7 +1085,10 @@ void MassageGrammar (std::string grammar_fileName, std::string out_name = std::s
 		factored_Grammar.PrintGrammar (out_name + "_factored.txt"s);
 
 		auto parse_table = ParseTable (factored_Grammar);
+		parse_table.PrintParseTableCSV (out_name + "_parse_table_indexes.txt"s);
 		parse_table.PrettyPrintParseTableCSV (out_name + "_parse_table.txt"s);
+
+		parse_table.firstAndFollows.Print (out_name + "_parse_table_first_follows.txt"s);
 	}
 }
 
