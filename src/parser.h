@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <stack>
 
 #include "lexer.h"
 
@@ -28,6 +29,7 @@
 //
 //}
 
+
 using signature_production = std::function < void(TokenStream &ts);
 using signature_match = std::function < void(TokenStream &ts, TokenType);
 
@@ -50,31 +52,36 @@ struct ProductionGroup
 
 TokenType
 FromTerminalIndex ();
-
 class ParserGenerator
 {
 	public:
-	ParserGenerator (ParseTable table)
+	ParserGenerator (ParseTable table);
+
+	private:
+	class ParserGenerator
 	{
-		int varibleCount = table.table.size ();
-		int terminalCount = table.table.at (0).size ();
-
-		auto match[](TokenStream & ts, Token t)
+		public:
+		ParserGenerator (ParseTable table)
 		{
-			if (ts.GetNextToken () == t) {}
+			int varibleCount = table.table.size ();
+			int terminalCount = table.table.at (0).size ();
+
+			auto match[](TokenStream & ts, Token t)
+			{
+				if (ts.GetNextToken () == t) {}
+			}
 		}
-	}
 
-	private:
-	TokenType FromTerminalIndex ();
+		private:
+		TokenType FromTerminalIndex ();
 
-	std::vector<Func> functions;
-};
+		std::vector<Func> functions;
+	};
 
-class Parser
-{
-	public:
-	Parser (TokenStream ts, ParserGenerator pg);
+	class Parser
+	{
+		public:
+		Parser (TokenStream ts, ParserGenerator pg);
 
-	private:
-};
+		private:
+	};

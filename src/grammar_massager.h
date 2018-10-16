@@ -100,14 +100,12 @@ class FirstsAndFollows
 
 }
 
-class ParseTable
+struct ParseTable
 {
-	public:
 	ParseTable (Grammar &grammar);
 
-	void PrintParseTable (std::string out_file_name);
+	void PrettyPrintParseTableCSV (std::string out_file_name);
 
-	private:
 	Grammar grammar;
 	std::map<int, int> var_key_to_index;
 
