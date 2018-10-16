@@ -61,33 +61,44 @@ class Grammar
 	std::map<int, std::string> terminals;
 	std::map<int, std::string> variables;
 	std::vector<Production> productions;
-	
+
 	int start_symbol = 0; // should generally be the first production...
 	int index = 0;
 
 	void PrintGrammar (std::string out_file_name);
 
 	int DeriveNewVariable (Variable var, std::string str);
-	
+
 	bool isEProd (Rule &rule) const;
-	
+
 	int find_epsilon_index () const;
-	
+
 	std::vector<Terminal> find_firsts_of_production (Production &prod);
-	
+
 	bool ProductionExists (Production &p) const;
-	
+
 	void AddProduction (Production p);
-	
+
 	void EraseProduction (Production &p);
-	
+
 	void ReorderProductionsByVariable ();
 	void RemoveDuplicateProductions ();
-	
+
 	std::vector<Production> ProductionsOfVariable (Variable var) const;
-	
 };
 
+class FirstsAndFollows
+{
+	public:
+	FirstsAndFollows (Grammar &grammar);
+
+	void FindFirsts ();
+	void FindFollows ();
+
+	std::map<int, std::vector<int>> firsts;
+	std::map<int, std::vector<int>> follows;
+
+}
 
 class ParseTable
 {

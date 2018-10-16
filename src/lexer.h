@@ -20,8 +20,8 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "enumstring.h"
 #include "OutputFileHandler.h"
+#include "enumstring.h"
 
 
 constexpr int line_buffer_length = 72;
@@ -44,7 +44,8 @@ using ProgramLine = std::string_view;
 // std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
 
 
-enum class TokenType {
+enum class TokenType
+{
 	PROGRAM,
 	ID,
 	PAREN_OPEN,
@@ -213,12 +214,12 @@ struct TokenInfo
 {
 	TokenType type;
 	TokenAttribute attrib;
-	//int line_location = -1;
-	//int column_location = -1;
+	// int line_location = -1;
+	// int column_location = -1;
 
 	TokenInfo (TokenType type, TokenAttribute attrib) : type (type), attrib (attrib) {}
 
-	//TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
+	// TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
 	//: type (type), attrib (attrib), line_location (line), column_location (column)
 	//{
 	//}
@@ -328,15 +329,19 @@ struct LexerMachine
 
 class TokenStream
 {
-public:
+	public:
 	TokenStream (std::vector<TokenInfo> tokens, SymbolTable symbolTable)
 	: tokens (tokens), symbolTable (symbolTable)
 	{
 	}
 
-	TokenInfo GetNextToken();
+	TokenInfo GetNextToken () { return tokens.at (index); }
+	void Advance ()
+	{
+		if (index + 1 <= tokens.size ()) index++;
+	}
 
-private:
+	private:
 	int index = 0;
 	std::vector<TokenInfo> tokens;
 	SymbolTable symbolTable;
@@ -369,7 +374,7 @@ class Lexer
 
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
-std::optional<ReservedWord> GetReservedWord(std::string s);
+std::optional<ReservedWord> GetReservedWord (std::string s);
 
-ReservedWordList ReadReservedWordsFile();
-std::optional<TokenInfo> CheckReseredWords(ReservedWordList &list, std::string_view s);
+ReservedWordList ReadReservedWordsFile ();
+std::optional<TokenInfo> CheckReseredWords (ReservedWordList &list, std::string_view s);

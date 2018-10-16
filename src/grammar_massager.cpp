@@ -121,6 +121,85 @@ std::vector<Production> Grammar::ProductionsOfVariable (Variable var) const
 	return prods;
 }
 
+FirstsAndFollows::FirstsAndFollows (Grammar &grammar)
+{
+	FindFirsts ();
+	FindFollows ();
+}
+/*
+1. If X is terminal, then FIRST(X) is {X}.
+2. If X -> e is a production, then add e to FIRST(X).
+3. If X is nonterminal and X -> Y1 Y2 ... Yk is a production, then place a in
+FIRST(X) if for some i, a is in FIRST(Yi), and e is in all of
+FIRST(Y1), FIRST(Y2), ..., FIRST(Yi-1); that is, y1, ... yi =*> e. If e is in
+FIRST(Yj) for all j = 1, 2, ..., k, then add e to FIRST(X). For
+example, everything in FIRSTS(Y) is surely in FIRST(X). If Y1 does not
+derive e, then we add nothing more to FIRST(X), but if Y1 =*> e, then we
+add FIRST(Y2) and so on.
+*/
+
+
+void FindFirsts ()
+{
+	int epsilon = grammar.find_epsilon_index ();
+	std::set<int> e_vars;
+
+	for (auto &prod : grammar.productions)
+	{
+		if (grammar.isEProd (prod.rule))
+		{
+			firsts.at (prod.var).push_back (Token (false, epsilon));
+			e_vars.insert (prod.var);
+		}
+
+		if (prod.rule.size () > 0 && prod.rule.at (0).isTerm)
+		{ first.at (prod.var).push_back (prod.rule.at (0)); } }
+
+	for (auto &prod : grammar.productions)
+	{
+		bool FailedEarly = false;
+		for (auto &token : prod.rule)
+		{
+			if (e_vars.count (token.index) == 1)
+			{
+				first.at (prod.var).insert (std::end (first.at (prod.var)),
+				std::begin (first.at (token.index)),
+				std::end (first.at (token.index)));
+			}
+			else
+			{
+				FailedEarly = true;
+				break; // stop looping
+			}
+		}
+		if (!FailedEarly) { first.at (prod.var).push_back (Token (false, epsilon)); }
+	}
+}
+
+/*
+1. Place $ in FOLLOW(S), where S is the start symbol and $ is the input
+right endmarker.
+2. If there is a production A —> aBB', then everything in FIRST(B') except for
+e is placed in FOLLOW(B).
+3. If there is a production A —> aB, or a production A -> aBB' where
+FIRST(B') contains e (i.e., B =*> e), then everything in FOLLOW(A)) is in FOLLOW(B).
+*/
+
+void FindFollows ()
+{
+
+	for (auto &prod : grammar.productions)
+	{
+		for (auto &[key, value] : firsts)
+		{
+			for (auto &tok : value)
+			{
+				if (value) }
+		}
+	}
+}
+
+
 bool FindFirst (Variable key,
 std::map<int, std::vector<Production>> &var_productions,
 int e_index,
@@ -181,12 +260,14 @@ std::map<int, std::vector<int>> &firsts)
 	}
 	return isChanged;
 }
-void FindFollow (Variable key,
-std::map<int, std::vector<Production>> &var_productions,
-std::map<int, bool> &e_prods,
-std::map<int, std::vector<int>> &follows)
-{
-}
+
+/*
+1. For each production A -> a of the grammar, do steps 2 and 3.
+2. For each terminal a in FIRST(a), add A -> a to M[A, a].
+3. If e is in FIRST(a), add A -> a to M[A,b] for each terminal b in
+FOLLOW(A). If e is in FIRST(a) and $ is in FOLLOW(A), add A -> a to [A, $].
+4. Make each undefined entry of M be error.
+*/
 
 ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
 {
@@ -262,10 +343,10 @@ ParseTable::ParseTable (Grammar &grammar) : grammar (grammar)
 	// find follows
 	// 	follows.at (grammar.start_symbol).push_back (-1); // terminal symbol is -1 possibly?
 
-	for (auto [key, value] : grammar.variables)
-	{
-		FindFollow (key, var_productions, e_prods, follows);
-	}
+	// for (auto [key, value] : grammar.variables)
+	// {
+	// 	FindFollow (key, var_productions, e_prods, follows);
+	// }
 
 	index = 0;
 	for (auto &prod : grammar.productions)
