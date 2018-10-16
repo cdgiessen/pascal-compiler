@@ -95,10 +95,11 @@ class FirstsAndFollows
 	void FindFirsts ();
 	void FindFollows ();
 
-	std::map<int, std::vector<int>> firsts;
-	std::map<int, std::vector<int>> follows;
+	std::map<int, std::set<int>> firsts;
+	std::map<int, std::set<int>> follows;
 
-}
+	Grammar& grammar;
+};
 
 struct ParseTable
 {
