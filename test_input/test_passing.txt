@@ -1,9 +1,9 @@
 program example(input, output);
-var x, y: integer;
-function gcd(a, b: integer): integer;
+var x: integer;
+procedure gcd(a, b: integer);
 begin
 	if b = 0 then gcd := a
-	else gcd := gcd(b, a mod b)
+	else gcd := call gcd(b, a mod b)
 end;
 
 begin
@@ -12,11 +12,11 @@ begin
 	x:= 1.2E3;
 	x:= y;
 
-	read(x,y);{comment}
+	{read(x,y);comment}
 	{
 	multiline comment
 	}
-	write(gcd(x,y))
+	{write(gcd(x,y))}
 
 	if(x > 5 and x < 100 or y >= 0 and not y <= 100) then x:= 5 else x:= x
 	do x:= x + 1 while x <> 10

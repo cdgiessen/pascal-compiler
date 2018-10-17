@@ -5,82 +5,82 @@
 
 #include "lexer.h"
 
-#include "grammar_massager.h"
-
-// void match(Token t) {
-//	//if t == current token & t != end token
-//	//advance to next token (consume it)
-//
-//	//if t == current token & t == end token
-//	// end of parse!
-//
-//	//otherwise if t != token,
-//	//Error, got token expected t
-//}
-//
-// void E() {
-//	//swtich (token)
-//}
-//
-// void Parse() {
-//	//get the first token from the sequence
-//	//call start production
-//	//match with end token
-//
-//}
-
-
-using signature_production = std::function < void(TokenStream &ts)>;
-using signature_match = std::function < void(TokenStream &ts, TokenType t)>;
-
-struct ProductionSignature
-{
-	Token start;
-	std::vector<std::variant<signature_production, signature_match>> funcs;
-	void operator() (TokenStream &ts) {}
-};
-
-struct ProductionGroup
-{
-	Token variable;
-	bool isEProd = false;
-	std::vector<ProductionSignature> signatures;
-
-	void operator() (TokenStream &ts) { TokenType t = ts.GetNextToken (); }
-};
-
-
-TokenType FromTerminalIndex ();
-class ParserGenerator
+class ParserContext
 {
 	public:
-	ParserGenerator (ParseTable table);
+	ParserContext (TokenStream ts, std::string errorFileHandle);
+
+	TokenInfo Current () const;
+	TokenInfo Advance ();
+
+	void LogError (std::string str);
 
 	private:
-	class ParserGenerator
-	{
-		public:
-		ParserGenerator (ParseTable table)
-		{
-			int varibleCount = table.table.size ();
-			int terminalCount = table.table.at (0).size ();
+	TokenStream ts;
+	OutputFileHandle ofp;
+};
 
-			auto match[](TokenStream & ts, Token t)
-			{
-				if (ts.GetNextToken () == t) {}
-			}
-		}
+class PascalParser
+{
+	public:
+	PascalParser (ParserContext &pc);
 
-		private:
-		TokenType FromTerminalIndex ();
+	void Parse ();
 
-		std::vector<Func> functions;
-	};
+	private:
+	ParserContext &pc;
 
-	class Parser
-	{
-		public:
-		Parser (TokenStream ts, ParserGenerator pg);
+	void Match (TokenType tt);
+	void HaltParse ();
+	void Synch (std::vector<TokenType> set);
 
-		private:
-	};
+	void ProgramStatement ();
+	void IdentifierList ();
+	void Declarations ();
+	void SubprogramDeclarations ();
+	void CompoundStatement ();
+	void Type ();
+	void StandardType ();
+	void SubprogramDeclaration ();
+	void SubprogramHead ();
+	void Arguments ();
+	void ParameterList ();
+	void OptionalStatements ();
+	void StatementList ();
+	void Statement ();
+	void Variable ();
+	void Expression ();
+	void ProcedureStatement ();
+	void ExpressionList ();
+	void SimpleExpression ();
+	void Term ();
+	void Sign ();
+	void Factor ();
+	void IdentifierListPrime ();
+	void DeclarationsPrime ();
+	void SubprogramDeclarationsPrime ();
+	void ParameterListPrime ();
+	void StatementListPrime ();
+	void ExpressionListPrime ();
+	void SimpleExpressionPrime ();
+	void TermPrime ();
+	void ProgramStatementFactored ();
+	void CompoundStatementFactored ();
+	void SubprogramDeclarationFactored ();
+	void SubprogramHeadFactored ();
+	void StatementFactoredOne ();
+	void StatementFactoredTwo ();
+	void VariableFactored ();
+	void ExpressionFactored ();
+	void ProcedureStatmentFactored ();
+	void ProgramStatementFactoredFactored ();
+	void SubprogramStatementFactoredFactored ();
+};
+
+class Parser
+{
+	public:
+	Parser (TokenStream ts);
+
+	private:
+};

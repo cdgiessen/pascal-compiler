@@ -1,7 +1,7 @@
 #include "lexer.h"
 
 template <>
-char const *enumStrings<TokenType>::data[] = { 
+char const *enumStrings<TokenType>::data[] = {
 	"PROGRAM",
 	"ID",
 	"PAREN_OPEN",
@@ -15,6 +15,7 @@ char const *enumStrings<TokenType>::data[] = {
 	"BRACKET_CLOSE",
 	"NUM",
 	"OF",
+	"STANDARD_TYPE",
 	"INTEGER",
 	"REAL",
 	"PROCEDURE",
@@ -28,7 +29,6 @@ char const *enumStrings<TokenType>::data[] = {
 	"MULOP",
 	"NOT",
 	"SIGN",
-	"JUST_PADDING_FOR_NEG_SIGN",
 	"IF",
 	"THEN",
 	"ELSE",
@@ -37,7 +37,14 @@ char const *enumStrings<TokenType>::data[] = {
 	"DOT_DOT",
 	"END_FILE",
 	"LEXERR",
-	};
+};
+
+std::string operator+ (const std::string &out, TokenType tt)
+{
+	std::ostringstream ss;
+	ss << enumToString (tt);
+	return out + ss.str ();
+}
 
 template <> char const *enumStrings<AddOpEnum>::data[] = { "PLUS", "MINUS", "OR" };
 
@@ -47,6 +54,7 @@ template <> char const *enumStrings<SignOpEnum>::data[] = { "PLUS", "MINUS" };
 
 template <> char const *enumStrings<RelOpEnum>::data[] = { "EQ", "NEQ", "LT", "LEQ", "GT", "GEQ" };
 
+template <> char const *enumStrings<StandardTypeEnum>::data[] = { "INTEGER", "REAL" };
 template <>
 char const *enumStrings<LexerErrorEnum>::data[] = {
 	"Unrecognized_Symbol",
@@ -75,13 +83,18 @@ char const *enumStrings<LexerErrorEnum>::data[] = {
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 {
-	std::array<int, 4> enumTypes = {1,2,3,4};
-	if (t.index() > 1 && t.index() < 5) {
-		return os << enumToString(t);
-	}
-	else {
-		return os << (t);
-	}
+	if (t.index () == 0) return os << std::get<0> (t);
+	if (t.index () == 1) return os << enumToString (std::get<1> (t));
+	if (t.index () == 2) return os << enumToString (std::get<2> (t));
+	if (t.index () == 3) return os << enumToString (std::get<3> (t));
+	if (t.index () == 4) return os << enumToString (std::get<4> (t));
+	if (t.index () == 5) return os << enumToString (std::get<5> (t));
+	if (t.index () == 6) return os << std::get<6> (t);
+	if (t.index () == 7) return os << std::get<7> (t);
+	if (t.index () == 8) return os << std::get<8> (t);
+	if (t.index () == 9) return os << std::get<9> (t);
+	if (t.index () == 10) return os << std::get<10> (t);
+	return os << "ATTRIB OSTREAM NOT UPDATED!";
 }
 
 std::optional<ReservedWord> GetReservedWord (std::string s)
@@ -90,9 +103,10 @@ std::optional<ReservedWord> GetReservedWord (std::string s)
 	if (s == "var") return ReservedWord (s, TokenType::VARIABLE);
 	if (s == "array") return ReservedWord (s, TokenType::ARRAY);
 	if (s == "of") return ReservedWord (s, TokenType::OF);
-	//if (s == "integer") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardEnum::integer);
-	//if (s == "real") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardEnum::real);
-	//if (s == "function") return ReservedWord (s, TokenType::FUNCTION);
+	if (s == "integer")
+		return ReservedWord (s, TokenType::STANDARD_TYPE, StandardTypeEnum::integer);
+	if (s == "real") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardTypeEnum::real);
+	// if (s == "function") return ReservedWord (s, TokenType::FUNCTION);
 	if (s == "procedure") return ReservedWord (s, TokenType::PROCEDURE);
 	if (s == "begin") return ReservedWord (s, TokenType::BEGIN);
 	if (s == "end") return ReservedWord (s, TokenType::END);
@@ -106,7 +120,7 @@ std::optional<ReservedWord> GetReservedWord (std::string s)
 	if (s == "and") return ReservedWord (s, TokenType::MULOP, MulOpEnum::t_and);
 	if (s == "div") return ReservedWord (s, TokenType::MULOP, MulOpEnum::div);
 	if (s == "mod") return ReservedWord (s, TokenType::MULOP, MulOpEnum::mod);
-	if (s == "call") return ReservedWord(s, TokenType::CALL);
+	if (s == "call") return ReservedWord (s, TokenType::CALL);
 	// if (s == "read") return ReservedWord(s, TokenType::ID, Symbo)
 	return {};
 }
@@ -221,8 +235,8 @@ TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> l
 						TokenFilePrinter (
 						cur_line_number, buffer.substr (0, machine_ret->chars_to_eat), machine_ret->content);
 
-						//machine_ret->content->line_location = cur_line_number;
-						//machine_ret->content->column_location = backward_index;
+						machine_ret->content->line_location = cur_line_number;
+						machine_ret->content->column_location = backward_index;
 
 						tokens.push_back (*machine_ret->content);
 					}
@@ -289,41 +303,41 @@ void Lexer::CreateMachines ()
 		 }
 		 return {};
 	 } });
-/*
-	AddMachine (
-	{ "String-Literal", 95, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		 if (line.length () == 0 || line[0] != '\'') return {};
+	/*
+	    AddMachine (
+	    { "String-Literal", 95, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	         if (line.length () == 0 || line[0] != '\'') return {};
 
 
-		 int i = 1;
-		 while (i < line.length () && line[i] != '\'')
+	         int i = 1;
+	         while (i < line.length () && line[i] != '\'')
 
-			 i++;
+	             i++;
 
-		 if (i >= line.length () || line[i] != '\'')
-		 {
-			 fmt::print ("{}\n", line);
-			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_NotTerminated, line)));
-		 }
-		 i++; // needs to include the extra tick mark
-		 auto full_s = line.substr (0, i);
+	         if (i >= line.length () || line[i] != '\'')
+	         {
+	             fmt::print ("{}\n", line);
+	             return LexerMachineReturn (i,
+	             TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_NotTerminated, line)));
+	         }
+	         i++; // needs to include the extra tick mark
+	         auto full_s = line.substr (0, i);
 
-		 std::string_view tickless_s = std::string_view (line.data () + 1, i - 1);
-		 if (i - 2 <= string_literal_length)
-		 {
-			 int loc = context.literalTable.AddSymbol (tickless_s);
-			 return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
-		 }
-		 else
-		 {
-			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
-		 }
-		 return LexerMachineReturn (i,
-		 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
-	 } });
-*/
+	         std::string_view tickless_s = std::string_view (line.data () + 1, i - 1);
+	         if (i - 2 <= string_literal_length)
+	         {
+	             int loc = context.literalTable.AddSymbol (tickless_s);
+	             return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
+	         }
+	         else
+	         {
+	             return LexerMachineReturn (i,
+	             TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
+	         }
+	         return LexerMachineReturn (i,
+	         TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
+	     } });
+	*/
 	AddMachine ({ "Whitespace", 100, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             int i = 0;
 		             while (i < line.length () && (line[i] == ' ' || line[i] == '\t' || line[i] == '\n'))

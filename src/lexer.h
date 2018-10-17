@@ -59,6 +59,7 @@ enum class TokenType
 	BRACKET_CLOSE,
 	NUM,
 	OF,
+	STANDARD_TYPE,
 	INTEGER,
 	REAL,
 	PROCEDURE,
@@ -72,7 +73,6 @@ enum class TokenType
 	MULOP,
 	NOT,
 	SIGN,
-	JUST_PADDING_FOR_NEG_SIGN,
 	IF,
 	THEN,
 	ELSE,
@@ -83,6 +83,7 @@ enum class TokenType
 	LEXERR,
 };
 
+std::string operator+ (const std::string &out, TokenType tt);
 
 struct NoAttrib
 {
@@ -129,6 +130,12 @@ enum class RelOpEnum
 	less_than_or_equal,   //<=
 	greater_than,         //>
 	greater_than_or_equal //>=
+};
+
+enum class StandardTypeEnum
+{
+	integer,
+	real
 };
 
 struct IntType
@@ -207,7 +214,7 @@ struct LexerError
 };
 
 using TokenAttribute =
-std::variant<NoAttrib, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, IntType, FloatType, SymbolType, StringLiteral, LexerError>;
+std::variant<NoAttrib, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, StandardTypeEnum, IntType, FloatType, SymbolType, StringLiteral, LexerError>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
 
@@ -215,15 +222,15 @@ struct TokenInfo
 {
 	TokenType type;
 	TokenAttribute attrib;
-	// int line_location = -1;
-	// int column_location = -1;
+	int line_location = -1;
+	int column_location = -1;
 
 	TokenInfo (TokenType type, TokenAttribute attrib) : type (type), attrib (attrib) {}
 
-	// TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
-	//: type (type), attrib (attrib), line_location (line), column_location (column)
-	//{
-	//}
+	TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
+	: type (type), attrib (attrib), line_location (line), column_location (column)
+	{
+	}
 
 	friend std::ostream &operator<< (std::ostream &os, const TokenInfo &t)
 	{
@@ -336,8 +343,8 @@ class TokenStream
 	{
 	}
 
-	TokenInfo GetNextToken () { return tokens.at (index); }
-	void Advance ()
+	TokenInfo Current () const { return tokens.at (index); }
+	TokenInfo Advance ()
 	{
 		if (index + 1 <= tokens.size ()) index++;
 	}

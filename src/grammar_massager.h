@@ -68,11 +68,11 @@ class Grammar
 	void PrintGrammar (std::string out_file_name);
 
 	int DeriveNewVariable (Variable var, std::string str);
-
+	int CreateNewVariable (Variable var, std::string str);
 	bool isEProd (Rule &rule) const;
 
 	int find_epsilon_index () const;
-	int find_eof_index() const; 
+	int find_eof_index () const;
 
 	std::vector<Terminal> find_firsts_of_production (Production &prod);
 
@@ -96,12 +96,12 @@ class FirstsAndFollows
 	void FindFirsts ();
 	void FindFollows ();
 
-	void Print(std::string outFileName);
+	void Print (std::string outFileName);
 
 	std::map<int, std::set<int>> firsts;
 	std::map<int, std::set<int>> follows;
 
-	Grammar& grammar;
+	Grammar &grammar;
 };
 
 struct ParseTable
@@ -109,7 +109,7 @@ struct ParseTable
 	ParseTable (Grammar &grammar);
 
 	void PrettyPrintParseTableCSV (std::string out_file_name);
-	void PrintParseTableCSV(std::string out_file_name);
+	void PrintParseTableCSV (std::string out_file_name);
 
 	Grammar grammar;
 

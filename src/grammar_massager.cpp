@@ -27,6 +27,31 @@ int Grammar::DeriveNewVariable (Variable var, std::string str)
 	return new_index;
 }
 
+
+int Grammar::CreateNewVariable (Variable var, std::string str)
+{
+	// check if the variable name already exists, return it if it does
+	std::string new_prod_name = variables.at (var) + str;
+	bool isUnique = true;
+	while (isUnique)
+	{
+		isUnique = false;
+		for (auto [key, value] : variables)
+		{
+			if (value == new_prod_name)
+			{
+				isUnique = true;
+				new_prod_name = new_prod_name + str;
+			}
+		}
+	}
+	// if it doesn't exist, make a new one
+	int new_index = index;
+	variables[index++] = new_prod_name;
+
+	return new_index;
+}
+
 bool Grammar::isEProd (Rule &rule) const
 {
 	for (auto &token : rule)
@@ -357,8 +382,8 @@ Grammar RemoveLeftRecursion (Grammar &eLess_Grammar)
 		}
 		/*if (index == -1)
 		{
-			fmt::print ("OH NO");
-			fmt::print ("OH NO");
+		    fmt::print ("OH NO");
+		    fmt::print ("OH NO");
 		}*/
 		fmt::print ("On iteration {}\n", priority);
 
@@ -512,7 +537,7 @@ Grammar RemoveXLeftFactoring (Grammar &in_grammar)
 
 				has_changed = true;
 				// make new variable
-				int new_index = res_grammar.DeriveNewVariable (prods.at (0).var, "_factoring");
+				int new_index = res_grammar.CreateNewVariable (prods.at (0).var, "_factoring");
 
 
 				// remove original production
@@ -808,14 +833,14 @@ void FirstsAndFollows::FindFollows ()
 						for (auto &item : firsts.at (prod.rule.back ().index))
 						{
 							if (item == epsilon_index) contains_e = true;
-						}}
-						if (contains_e)
-						{
-							if (prod.rule.size () > 1 && !prod.rule.at (prod.rule.size () - 2).isTerm)
-								follows[prod.rule.at (prod.rule.size () - 2).index].insert (
-								std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
 						}
-					
+					}
+					if (contains_e)
+					{
+						if (prod.rule.size () > 1 && !prod.rule.at (prod.rule.size () - 2).isTerm)
+							follows[prod.rule.at (prod.rule.size () - 2).index].insert (
+							std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
+					}
 				}
 				if (size != follows.size ()) hasChanged = true;
 			}
@@ -1021,7 +1046,7 @@ void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
 	for (auto [key, value] : grammar.terminals)
 	{
 		if (value == ",")
-			fmt::print (ofh.FP (), "\'comma\' ");
+			fmt::print (ofh.FP (), "\'comma\', ");
 		else
 			fmt::print (ofh.FP (), "\'{}\', ", value);
 	}
