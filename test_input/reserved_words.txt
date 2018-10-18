@@ -4,7 +4,6 @@ array		array		0
 of			of			0
 integer		integer		0
 real		real		0
-function	function	0
 procedure	procedure	0
 begin		begin		0
 end			end			0

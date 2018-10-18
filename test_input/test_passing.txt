@@ -11,18 +11,22 @@ begin
 end;
 
 procedure gcd(a: integer ; b: integer);
-var x: real;
+	procedure in(a: integer ; b: integer);
+	var x: real;
+	begin
+		call gcd(b, a mod b)
+	end;
+	procedure in2; begin end;
+	begin
+		if b = 0 then gcd := a;
+	end;
+	procedure in3();
+	begin
+	end;
 begin
-	if b = 0 then gcd := a;
-	call gcd(b, a mod b)
-end;
-
-procedure gcd(a: integer ; b: integer);
-procedure inner(); begin end;
-procedure inner; begin end;
-begin
-	if b = 0 then gcd := a;
-	call gcd(b, a mod b)
+	call in1(a, b);
+	call in2;
+	call in3;
 end;
 
 begin

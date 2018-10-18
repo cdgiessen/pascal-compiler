@@ -9,8 +9,8 @@
 #include <variant>
 #include <vector>
 
-#include "enumstring.h"
 #include "common.h"
+#include "enumstring.h"
 
 
 constexpr int line_buffer_length = 72;
@@ -127,19 +127,20 @@ enum class StandardTypeEnum
 	real
 };
 
-struct NumType {
+struct NumType
+{
 	std::variant<int, float> val;
-	NumType(int a ):val(a){}
-	NumType(float a):val(a){}
+	NumType (int a) : val (a) {}
+	NumType (float a) : val (a) {}
 
 	friend std::ostream &operator<< (std::ostream &os, const NumType &t)
 	{
-		if(t.val.index() == 0) return os << std::get<0>(t.val) << "(INT)";
-		if (t.val.index() == 1) return os << std::get<1>(t.val) << "(FLOAT)";
+		if (t.val.index () == 0) return os << std::get<0> (t.val) << "(INT)";
+		if (t.val.index () == 1) return os << std::get<1> (t.val) << "(FLOAT)";
 	}
 };
 
-//struct IntType
+// struct IntType
 //{
 //	int val;
 //	IntType (int a) : val (a) {}
@@ -150,7 +151,7 @@ struct NumType {
 //	}
 //};
 //
-//struct FloatType
+// struct FloatType
 //{
 //	float val;
 //	FloatType (float a) : val (a) {}
@@ -287,10 +288,10 @@ struct LexerMachineReturn
 
 struct LexerContext
 {
-	LexerContext(CompilationContext& compContext): compContext(compContext){}
+	LexerContext (CompilationContext &compContext) : compContext (compContext) {}
 	bool isInComment = false;
 	bool isInLiteral = false;
-	CompilationContext& compContext;
+	CompilationContext &compContext;
 };
 
 using LexerMachineFuncSig =
@@ -310,7 +311,7 @@ class Lexer;
 class TokenStream
 {
 	public:
-	TokenStream (Lexer& lexer, CompilationContext& compilationContext);
+	TokenStream (Lexer &lexer, CompilationContext &compilationContext);
 
 	TokenInfo Current () const;
 	TokenInfo Advance ();
@@ -318,16 +319,16 @@ class TokenStream
 	private:
 	int index = 0;
 	std::vector<TokenInfo> tokens;
-	CompilationContext& compilationContext;
-	Lexer& lexer;
+	CompilationContext &compilationContext;
+	Lexer &lexer;
 };
 
 class Lexer
 {
 	public:
-	Lexer (Logger& logger) : logger(logger)
+	Lexer (Logger &logger) : logger (logger)
 	{
-		ReadReservedWordsFile();
+		ReadReservedWordsFile ();
 		CreateMachines ();
 	}
 
@@ -336,20 +337,20 @@ class Lexer
 
 	void AddMachine (LexerMachine &&machine);
 
-	std::vector<TokenInfo> GetTokens (CompilationContext& context);
+	std::vector<TokenInfo> GetTokens (CompilationContext &context, int ammount = 1);
 
 	void TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachineReturn::OptionalToken content);
 
 
-	std::optional<TokenInfo> CheckReseredWords(std::string_view s);
-	std::optional<ReservedWord> GetReservedWord(std::string s);
+	std::optional<TokenInfo> CheckReseredWords (std::string_view s);
+	std::optional<ReservedWord> GetReservedWord (std::string s);
 
-	void ReadReservedWordsFile();
+	void ReadReservedWordsFile ();
 
 
 	std::vector<LexerMachine> machines;
 	ReservedWordList reservedWords;
-	Logger& logger;
+	Logger &logger;
 };
 
 

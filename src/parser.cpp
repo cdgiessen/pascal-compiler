@@ -49,7 +49,7 @@ void ParserContext::HaltParse ()
 
 void ParserContext::Synch (std::vector<TokenType> set)
 {
-	set.push_back(TokenType::END_FILE);
+	set.push_back (TokenType::END_FILE);
 	TokenType tt = Current ().type;
 
 	bool found = false;
@@ -331,7 +331,8 @@ void PascalParser::Expression (ParserContext &pc)
 			TokenType::COMMA,
 			TokenType::THEN,
 			TokenType::ELSE,
-			TokenType::DO, TokenType::END});
+			TokenType::DO,
+			TokenType::END });
 	}
 }
 void PascalParser::ProcedureStatement (ParserContext &pc)
@@ -392,7 +393,7 @@ void PascalParser::SimpleExpression (ParserContext &pc)
 			TokenType::THEN,
 			TokenType::ELSE,
 			TokenType::DO,
-			TokenType::END});
+			TokenType::END });
 	}
 }
 void PascalParser::Term (ParserContext &pc)
@@ -407,7 +408,7 @@ void PascalParser::Term (ParserContext &pc)
 			TermPrime (pc);
 			break;
 		default:
-			pc.Synch({ TokenType::PAREN_CLOSE,
+			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
 			TokenType::COMMA,
@@ -451,7 +452,7 @@ void PascalParser::Factor (ParserContext &pc)
 			Factor (pc);
 			break;
 		default:
-			pc.Synch({ TokenType::PAREN_CLOSE,
+			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
 			TokenType::COMMA,
@@ -595,7 +596,7 @@ void PascalParser::SimpleExpressionPrime (ParserContext &pc)
 			TokenType::THEN,
 			TokenType::ELSE,
 			TokenType::DO,
-			TokenType::END});
+			TokenType::END });
 	}
 	// e -prod
 }
@@ -681,7 +682,7 @@ void PascalParser::SubprogramDeclarationFactored (ParserContext &pc)
 	{
 		case (TokenType::VARIABLE):
 			Declarations (pc);
-			ProgramStatementFactoredFactored (pc);
+			SubprogramStatementFactoredFactored (pc);
 			break;
 		case (TokenType::PROCEDURE):
 			SubprogramDeclarations (pc);
@@ -742,7 +743,7 @@ void PascalParser::StatementFactoredElse (ParserContext &pc)
 		case (TokenType::END):
 			break;
 		default:
-			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE , TokenType::END });
+			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 	}
 	// e-prod
 }
@@ -786,7 +787,7 @@ void PascalParser::ExpressionFactored (ParserContext &pc)
 			TokenType::COMMA,
 			TokenType::THEN,
 			TokenType::ELSE,
-			TokenType::DO, 
+			TokenType::DO,
 			TokenType::END });
 	}
 

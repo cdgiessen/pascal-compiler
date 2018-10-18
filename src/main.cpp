@@ -11,7 +11,8 @@ class Compiler
 	void Compile (CompilationContext &context)
 	{
 		TokenStream ts (lexer, context);
-		parser.Parse (ParserContext (ts, logger));
+		ParserContext ct (ts, logger);
+		parser.Parse (ct);
 	}
 
 	Logger logger;
@@ -34,7 +35,7 @@ int main (int argc, char *argv[])
 
 	CompilationContext context (fileReader);
 
-	compiler.Compile(context);
+	compiler.Compile (context);
 
 	return 0;
 }

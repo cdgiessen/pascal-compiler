@@ -791,8 +791,8 @@ void FirstsAndFollows::FindFirsts ()
 void FirstsAndFollows::FindFollows ()
 {
 	// 1. Place $ in FOLLOW(S), where S is the start symbol and $ is the input right endmarker.
-	int eof = grammar.find_eof_index ();
 	int epsilon_index = grammar.find_epsilon_index ();
+	int eof = grammar.find_eof_index ();
 	follows[grammar.start_symbol].insert (eof);
 
 	// 2. If there is a production A — > aBB', then everything in FIRST(B') except for

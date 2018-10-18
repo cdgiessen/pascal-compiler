@@ -199,9 +199,10 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 	}
 }
 
-std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext)
+std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext, int ammount)
 {
 	std::vector<TokenInfo> tokens;
+
 	auto lines = compContext.dataSource.Read ();
 	if (lines.has_value ())
 	{
@@ -633,7 +634,7 @@ void Lexer::CreateMachines ()
 TokenStream::TokenStream (Lexer &lexer, CompilationContext &compilationContext)
 : compilationContext (compilationContext), lexer (lexer)
 {
-	auto &new_tokens = lexer.GetTokens (compilationContext);
+	auto new_tokens = lexer.GetTokens (compilationContext);
 	tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
 }
 
