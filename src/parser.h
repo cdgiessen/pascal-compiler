@@ -9,34 +9,35 @@
 class ParserContext
 {
 	public:
-	ParserContext (TokenStream& ts, Logger& logger);
+	ParserContext (TokenStream &ts, Logger &logger);
 
 	TokenInfo Current () const;
 
-	void Match(TokenType tt);
-	void Match(std::vector<TokenType> match_set);
-	void HaltParse();
-	void Synch(std::vector<TokenType> set);
+	void Match (TokenType tt);
+	void Match (std::vector<TokenType> match_set);
+	void HaltParse ();
+	void Synch (std::vector<TokenType> set);
 
-	void LogError (std::string str);
+	void LogError (int line_loc, std::string str);
+	void LogErrorExpectedGot (std::vector<TokenType> types);
 
 	private:
 	TokenInfo Advance ();
-	Logger& logger;
-	TokenStream& ts;
+	Logger &logger;
+	TokenStream &ts;
 };
 
 class PascalParser
 {
 	public:
-	PascalParser (Logger& logger);
+	PascalParser (Logger &logger);
 
 	void Parse (ParserContext &pc);
 
 	private:
 	using TT = TokenType;
 
-	Logger& logger;
+	Logger &logger;
 
 	void ProgramStatement (ParserContext &pc);
 	void IdentifierList (ParserContext &pc);
@@ -72,8 +73,8 @@ class PascalParser
 	void CompoundStatementFactored (ParserContext &pc);
 	void SubprogramDeclarationFactored (ParserContext &pc);
 	void SubprogramHeadFactored (ParserContext &pc);
-	void StatementFactoredBegin(ParserContext &pc);
-	void StatementFactoredElse(ParserContext &pc);
+	void StatementFactoredBegin (ParserContext &pc);
+	void StatementFactoredElse (ParserContext &pc);
 	void VariableFactored (ParserContext &pc);
 	void ExpressionFactored (ParserContext &pc);
 	void ProcedureStatmentFactored (ParserContext &pc);

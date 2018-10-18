@@ -1,0 +1,27 @@
+program example(input, output);
+var x, y: integer;
+procedure gcd(a: real; b: integer);
+begin
+	if b = 0 then gcd := a
+	else gcd := gcd(b, a mod b)
+end;
+
+procedure in end;
+begin
+    if a = 0 then a:= 1 else a:= 0 else a:=1;
+
+	tooLongIDlength;
+	x := 12345678901;
+	x := 012345;
+
+	y := 01.1;
+	y := 1.222222;
+
+	z := 1.1E+;
+	w := 1.;
+
+	if(x > 5 and x < 100 or y >= 0 not y <= 100);
+	while x:= x + 1 do x <<> 10
+
+end
+.

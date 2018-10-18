@@ -1,10 +1,3 @@
-3.4E+
-3+3E4
-3.E4+
-3.+E4
-$@
-
-
 program example(input, output);
 var x, y: integer;
 function gcd(a, b: integer): integer;

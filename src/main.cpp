@@ -24,7 +24,7 @@ class Compiler
 int main (int argc, char *argv[])
 {
 	std::vector<std::string> file_list;
-	file_list.push_back ("test_input/test_passing.txt");
+	file_list.push_back ("test_input/test_some_errors.txt");
 	// file_list.push_back("test_input/test_error.txt");
 
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
@@ -36,6 +36,7 @@ int main (int argc, char *argv[])
 	CompilationContext context (fileReader);
 
 	compiler.Compile (context);
+	compiler.logger.LogErrors ();
 
 	return 0;
 }

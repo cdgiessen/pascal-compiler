@@ -190,8 +190,13 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 		enumToString ((content)->type),
 		(content)->attrib.index (),
 		(content)->attrib);
+
 		if ((content)->attrib.index () == 9) // lexer error
-		{ fmt::print (logger.listing_file.FP (), "{:<8}{}\n", "LEXERR:", content->attrib); } }
+		{
+			logger.AddLexErrPrint (
+			line_num, [=](FILE *fp) { fmt::print (fp, "{:<8}{}\n", "LEXERR:", content->attrib); });
+		}
+	}
 	else
 	{
 		// fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
@@ -215,7 +220,8 @@ std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext, int am
 
 		for (auto &s_line : lines.value ())
 		{
-			fmt::print (logger.listing_file.FP (), "{:<8}{}\n", cur_line_number, s_line);
+			logger.AddListPrint (cur_line_number,
+			[=](FILE *fp) { fmt::print (fp, "{:<8}{}\n", cur_line_number, s_line); });
 			while (backward_index < s_line.size ())
 			{
 				std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
@@ -256,10 +262,9 @@ std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext, int am
 					TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Unrecognized_Symbol, bad_symbol)));
 
 					if (buffer[0] == '$')
-						fmt::print (logger.listing_file.FP (), "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
-					// else
-					//	fmt::print (
-					//	listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
+						logger.AddLexErrPrint (cur_line_number, [=](FILE *fp) {
+							fmt::print (fp, "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
+						});
 
 					TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
 					tokens.push_back (*machine_ret->content);
@@ -271,6 +276,7 @@ std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext, int am
 			backward_index = 0;
 		}
 	}
+
 	return tokens;
 }
 

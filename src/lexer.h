@@ -347,7 +347,6 @@ class Lexer
 
 	void ReadReservedWordsFile ();
 
-
 	std::vector<LexerMachine> machines;
 	ReservedWordList reservedWords;
 	Logger &logger;

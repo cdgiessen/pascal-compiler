@@ -7,9 +7,25 @@ TokenInfo ParserContext::Current () const { return ts.Current (); }
 TokenInfo ParserContext::Advance () { return ts.Advance (); }
 
 
-void ParserContext::LogError (std::string str)
+void ParserContext::LogError (int line_loc, std::string str)
 {
-	fmt::print (logger.listing_file.FP (), "{}\n", str);
+	logger.AddSynErrPrint (line_loc, [=](FILE *fp) { fmt::print (fp, "{}\n", str); });
+}
+
+void ParserContext::LogErrorExpectedGot (std::vector<TokenType> types)
+{
+	using namespace std::string_literals;
+
+	std::string out = "SYNERR: Expected "s;
+	int count = 0;
+	for (auto &t : types)
+	{
+		out = out + t;
+		if (count++ != types.size () - 1) out += ", ";
+	}
+	out += "; Recieved "s + Current ().type;
+
+	logger.AddSynErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
 
 void ParserContext::Match (TokenType tt)
@@ -26,9 +42,9 @@ void ParserContext::Match (TokenType tt)
 
 	else if (tt != Current ().type)
 	{
-		LogError ("SE: Expected "s + tt + ", Recieved "s + Current ().type + "\n\t Error at line "
-		          + std::to_string (Current ().line_location) + ":"
-		          + std::to_string (Current ().column_location));
+		LogError (Current ().line_location,
+		"SYNERR: Expected "s + tt + ", Recieved "s + Current ().type + "\n\t Error at line "
+		+ std::to_string (Current ().line_location) + ":" + std::to_string (Current ().column_location));
 		Advance ();
 	}
 }
@@ -44,7 +60,7 @@ void ParserContext::Match (std::vector<TokenType> match_set)
 void ParserContext::HaltParse ()
 {
 	// stop i guess?
-	LogError ("HALT");
+	// LogError ("HALT");
 }
 
 void ParserContext::Synch (std::vector<TokenType> set)
@@ -82,6 +98,7 @@ void PascalParser::ProgramStatement (ParserContext &pc)
 			ProgramStatementFactored (pc);
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROGRAM });
 			pc.Synch ({ TokenType::END_FILE });
 	}
 }
@@ -96,6 +113,8 @@ void PascalParser::IdentifierList (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::ID });
+
 			pc.Synch ({ TokenType::PAREN_CLOSE });
 	}
 }
@@ -111,6 +130,8 @@ void PascalParser::Declarations (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::VARIABLE });
+
 			pc.Synch ({ TokenType::PROCEDURE, TokenType::BEGIN });
 	}
 }
@@ -125,6 +146,8 @@ void PascalParser::SubprogramDeclarations (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE });
+
 			pc.Synch ({ TokenType::BEGIN });
 	}
 }
@@ -138,6 +161,8 @@ void PascalParser::CompoundStatement (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::BEGIN });
+
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::DOT });
 	}
 }
@@ -161,6 +186,7 @@ void PascalParser::Type (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::ARRAY, TokenType::STANDARD_TYPE });
 			pc.Synch ({ TokenType::PAREN_CLOSE, TokenType::SEMICOLON });
 	}
 }
@@ -173,6 +199,7 @@ void PascalParser::StandardType (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::STANDARD_TYPE });
 			pc.Synch ({ TokenType::PAREN_CLOSE, TokenType::SEMICOLON });
 	}
 }
@@ -186,6 +213,8 @@ void PascalParser::SubprogramDeclaration (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE });
+
 			pc.Synch ({ TokenType::SEMICOLON });
 	}
 }
@@ -199,6 +228,8 @@ void PascalParser::SubprogramHead (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE });
+
 			pc.Synch ({ TokenType::PROCEDURE, TokenType::VARIABLE, TokenType::BEGIN });
 	}
 }
@@ -213,6 +244,7 @@ void PascalParser::Arguments (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PAREN_OPEN });
 			pc.Synch ({ TokenType::SEMICOLON });
 	}
 }
@@ -228,6 +260,7 @@ void PascalParser::ParameterList (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::ID });
 			pc.Synch ({ TokenType::PAREN_CLOSE });
 	}
 }
@@ -244,6 +277,8 @@ void PascalParser::OptionalStatements (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::VARIABLE, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
 			pc.Synch ({ TokenType::END });
 	}
 }
@@ -261,6 +296,8 @@ void PascalParser::StatementList (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::VARIABLE, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
 			pc.Synch ({ TokenType::END });
 	}
 }
@@ -295,6 +332,8 @@ void PascalParser::Statement (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::VARIABLE, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 	}
 }
@@ -308,6 +347,7 @@ void PascalParser::Variable (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::ID });
 			pc.Synch ({ TokenType::ASSIGNOP });
 	}
 }
@@ -325,6 +365,8 @@ void PascalParser::Expression (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::ID, TokenType::PAREN_OPEN, TokenType::NUM, TokenType::NOT, TokenType::SIGN });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -346,6 +388,7 @@ void PascalParser::ProcedureStatement (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::CALL });
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 	}
 }
@@ -363,6 +406,8 @@ void PascalParser::ExpressionList (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::ID, TokenType::PAREN_OPEN, TokenType::NUM, TokenType::NOT, TokenType::SIGN });
 			pc.Synch ({ TokenType::PAREN_CLOSE });
 	}
 }
@@ -385,6 +430,8 @@ void PascalParser::SimpleExpression (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::ID, TokenType::PAREN_OPEN, TokenType::NUM, TokenType::NOT, TokenType::SIGN });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -408,6 +455,7 @@ void PascalParser::Term (ParserContext &pc)
 			TermPrime (pc);
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::ID, TokenType::PAREN_OPEN, TokenType::NUM, TokenType::NOT });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -429,6 +477,7 @@ void PascalParser::Sign (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::SIGN });
 			pc.Synch ({ TokenType::ID, TokenType::PAREN_OPEN, TokenType::NUM, TokenType::NOT });
 	}
 }
@@ -452,6 +501,7 @@ void PascalParser::Factor (ParserContext &pc)
 			Factor (pc);
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::ID, TokenType::PAREN_OPEN, TokenType::NUM, TokenType::NOT });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -477,6 +527,7 @@ void PascalParser::IdentifierListPrime (ParserContext &pc)
 		case (TokenType::PAREN_CLOSE):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::COMMA, TokenType::PAREN_CLOSE });
 			pc.Synch ({ TokenType::PAREN_CLOSE });
 	}
 	// e-prod
@@ -497,6 +548,7 @@ void PascalParser::DeclarationsPrime (ParserContext &pc)
 		case (TokenType::BEGIN):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE, TokenType::BEGIN, TokenType::VARIABLE });
 			pc.Synch ({ TokenType::PROCEDURE, TokenType::BEGIN });
 	}
 	// e-prod
@@ -513,6 +565,7 @@ void PascalParser::SubprogramDeclarationsPrime (ParserContext &pc)
 		case (TokenType::BEGIN):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE, TokenType::BEGIN });
 			pc.Synch ({ TokenType::BEGIN });
 	}
 	// e-prod
@@ -531,6 +584,7 @@ void PascalParser::ParameterListPrime (ParserContext &pc)
 		case (TokenType::PAREN_CLOSE):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::SEMICOLON, TokenType::PAREN_CLOSE });
 			pc.Synch ({ TokenType::PAREN_CLOSE });
 	}
 	// e-prod
@@ -547,6 +601,7 @@ void PascalParser::StatementListPrime (ParserContext &pc)
 		case (TokenType::END):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::END, TokenType::SEMICOLON });
 			pc.Synch ({ TokenType::END });
 	}
 	// e -prod
@@ -564,6 +619,7 @@ void PascalParser::ExpressionListPrime (ParserContext &pc)
 		case (TokenType::PAREN_CLOSE):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PAREN_CLOSE, TokenType::COMMA });
 			pc.Synch ({ TokenType::PAREN_CLOSE });
 	}
 	// e -prod
@@ -588,6 +644,16 @@ void PascalParser::SimpleExpressionPrime (ParserContext &pc)
 		case (TokenType::END):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PAREN_CLOSE,
+			TokenType::SEMICOLON,
+			TokenType::BRACKET_CLOSE,
+			TokenType::COMMA,
+			TokenType::ADDOP,
+			TokenType::RELOP,
+			TokenType::THEN,
+			TokenType::ELSE,
+			TokenType::DO,
+			TokenType::END });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -621,6 +687,17 @@ void PascalParser::TermPrime (ParserContext &pc)
 		case (TokenType::END):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PAREN_CLOSE,
+			TokenType::SEMICOLON,
+			TokenType::BRACKET_CLOSE,
+			TokenType::COMMA,
+			TokenType::MULOP,
+			TokenType::ADDOP,
+			TokenType::RELOP,
+			TokenType::THEN,
+			TokenType::ELSE,
+			TokenType::DO,
+			TokenType::END });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -653,6 +730,7 @@ void PascalParser::ProgramStatementFactored (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::VARIABLE, TokenType::PROCEDURE, TokenType::BEGIN });
 			pc.Synch ({ TokenType::END_FILE });
 	}
 }
@@ -673,6 +751,8 @@ void PascalParser::CompoundStatementFactored (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::END, TokenType::BEGIN, TokenType::ID, TokenType::CALL, TokenType::IF, TokenType::WHILE });
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::DOT });
 	}
 }
@@ -693,6 +773,7 @@ void PascalParser::SubprogramDeclarationFactored (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::VARIABLE, TokenType::PROCEDURE, TokenType::BEGIN });
 			pc.Synch ({ TokenType::SEMICOLON });
 	}
 }
@@ -709,6 +790,7 @@ void PascalParser::SubprogramHeadFactored (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::SEMICOLON, TokenType::PAREN_OPEN });
 			pc.Synch ({ TokenType::VARIABLE, TokenType::BEGIN, TokenType::PROCEDURE });
 	}
 }
@@ -728,6 +810,8 @@ void PascalParser::StatementFactoredBegin (ParserContext &pc)
 			pc.Match (TokenType::END);
 			break;
 		default:
+			pc.LogErrorExpectedGot (
+			{ TokenType::END, TokenType::BEGIN, TokenType::ID, TokenType::CALL, TokenType::IF, TokenType::WHILE });
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 	}
 }
@@ -743,6 +827,7 @@ void PascalParser::StatementFactoredElse (ParserContext &pc)
 		case (TokenType::END):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::END, TokenType::ELSE, TokenType::SEMICOLON });
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 	}
 	// e-prod
@@ -759,6 +844,7 @@ void PascalParser::VariableFactored (ParserContext &pc)
 		case (TokenType::ASSIGNOP):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::BRACKET_OPEN, TokenType::ASSIGNOP });
 			pc.Synch ({ TokenType::ASSIGNOP });
 	}
 	// e-prod
@@ -781,6 +867,15 @@ void PascalParser::ExpressionFactored (ParserContext &pc)
 		case (TokenType::END):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::RELOP,
+			TokenType::PAREN_CLOSE,
+			TokenType::SEMICOLON,
+			TokenType::BRACKET_CLOSE,
+			TokenType::COMMA,
+			TokenType::THEN,
+			TokenType::ELSE,
+			TokenType::DO,
+			TokenType::END });
 			pc.Synch ({ TokenType::PAREN_CLOSE,
 			TokenType::SEMICOLON,
 			TokenType::BRACKET_CLOSE,
@@ -806,6 +901,7 @@ void PascalParser::ProcedureStatmentFactored (ParserContext &pc)
 		case (TokenType::ELSE):
 			break;
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PAREN_OPEN, TokenType::SEMICOLON, TokenType::ELSE });
 			pc.Synch ({ TokenType::ELSE, TokenType::SEMICOLON, TokenType::END });
 	}
 	// e-prod
@@ -825,6 +921,7 @@ void PascalParser::ProgramStatementFactoredFactored (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE, TokenType::BEGIN });
 			pc.Synch ({ TokenType::END_FILE });
 	}
 }
@@ -841,6 +938,7 @@ void PascalParser::SubprogramStatementFactoredFactored (ParserContext &pc)
 			break;
 
 		default:
+			pc.LogErrorExpectedGot ({ TokenType::PROCEDURE, TokenType::BEGIN });
 			pc.Synch ({ TokenType::SEMICOLON });
 	}
 }
