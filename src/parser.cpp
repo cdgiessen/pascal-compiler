@@ -42,9 +42,7 @@ void ParserContext::Match (TokenType tt)
 
 	else if (tt != Current ().type)
 	{
-		LogError (Current ().line_location,
-		"SYNERR: Expected "s + tt + ", Recieved "s + Current ().type + "\n\t Error at line "
-		+ std::to_string (Current ().line_location) + ":" + std::to_string (Current ().column_location));
+		LogErrorExpectedGot ({ tt });
 		Advance ();
 	}
 }
