@@ -825,10 +825,10 @@ void FirstsAndFollows::FindFollows ()
 		{
 			int i = prod.rule.size () - 1;
 			// for (int i = 1; i < prod.rule.size () - 1; i++)
-			int size = 0;
+
 			if (!prod.rule.at (i).isTerm && follows.count (prod.var) == 1)
 			{
-				int i_size = follows.count (prod.rule.at (i).index) == 1 ?
+				int i_size = (follows.count (prod.rule.at (i).index) == 1) ?
 				             follows.at (prod.rule.at (i).index).size () :
 				             0;
 
@@ -844,42 +844,74 @@ void FirstsAndFollows::FindFollows ()
 		//	FIRST(B') contains e (i.e., B =*> e) then everything in FOLLOW(A) is in FOLLOW(B).
 		for (auto &prod : grammar.productions)
 		{
-			for (int i = 0; i < prod.rule.size () - 1; i++)
+			if (prod.rule.size () > 1)
 			{
-				int size = i;
-				if (size > 1 && !prod.rule.at (i).isTerm && firsts.count (prod.rule.at (i + 1).index) == 1
-				    && firsts.at (prod.rule.at (i + 1).index).count (epsilon_index) == 1
-				    && follows.count (prod.var) == 1)
+				for (int i = 0; i < prod.rule.size () - 1; i++)
 				{
-					int i_size = follows.count (prod.rule.at (i).index) == 1 ?
-					             follows.at (prod.rule.at (i).index).size () :
-					             0;
 
-					follows[prod.rule.at (i).index].insert (
-					std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
+					Rule b_rule;
+					b_rule.insert (std::end (b_rule), std::begin (prod.rule) + 1, std::end (prod.rule));
+					auto b_firsts = GetFirstsOfRule (b_rule, epsilon_index);
 
-					if (i_size != follows.at (prod.rule.at (i).index).size ())
-					{ hasChanged = true; } }
+					bool has_epsilon = false;
+					for (auto &tok : b_firsts)
+					{
+						if (tok == epsilon_index) has_epsilon = true;
+					}
+
+					if (has_epsilon)
+					{
+
+						if (!prod.rule.at (i).isTerm && follows.count (prod.var) == 1)
+						{
+
+							int i_size = follows.count (prod.rule.at (i).index) == 1 ?
+							             follows.at (prod.rule.at (i).index).size () :
+							             0;
+
+							follows[prod.rule.at (i).index].insert (
+							std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
+
+							if (i_size != follows.at (prod.rule.at (i).index).size ())
+							{ hasChanged = true; } }
+					}
+
+					/*int size = i;
+					if (size > 1 && !prod.rule.at (i).isTerm && firsts.count (prod.rule.at (i + 1).index) == 1
+					    && firsts.at (prod.rule.at (i + 1).index).count (epsilon_index) == 1
+					    && follows.count (prod.var) == 1)
+					{
+					    int i_size = follows.count (prod.rule.at (i).index) == 1 ?
+					                 follows.at (prod.rule.at (i).index).size () :
+					                 0;
+
+					    follows[prod.rule.at (i).index].insert (
+					    std::begin (follows.at (prod.var)), std::end (follows.at (prod.var)));
+
+					    if (i_size != follows.at (prod.rule.at (i).index).size ())
+					    { hasChanged = true; } }*/
+				}
 			}
 		}
 	}
 }
 
-std::set<int> FirstsAndFollows::GetFirstsOfRule(Rule& rule, int epsilon_index) {
+std::set<int> FirstsAndFollows::GetFirstsOfRule (Rule &rule, int epsilon_index)
+{
 	std::set<int> ret;
 
-	for (auto& tok : rule) {
-		if(tok.index != epsilon_index)
-		ret.insert(std::begin(firsts.at(tok.index)), std::end(firsts.at(tok.index)));
+	for (auto &tok : rule)
+	{
+		if (tok.index != epsilon_index)
+			ret.insert (std::begin (firsts.at (tok.index)), std::end (firsts.at (tok.index)));
 
 		bool has_epsilon = false;
 		if (tok.index != epsilon_index)
-		for (auto &first : firsts.at(tok.index))
-		{
-			if (first == epsilon_index) has_epsilon = true;
-		}
-		if(!has_epsilon) break;
-
+			for (auto &first : firsts.at (tok.index))
+			{
+				if (first == epsilon_index) has_epsilon = true;
+			}
+		if (!has_epsilon) break;
 	}
 	return ret;
 }
@@ -1045,18 +1077,17 @@ ParseTable::ParseTable (Grammar &grammar) : grammar (grammar), firstAndFollows (
 	{
 		// 2. For each terminal a in FIRST(a'), add A->a' to M[A, a].
 
-		for (auto &first : firstAndFollows.GetFirstsOfRule(prod.rule, e_index))// firsts.at (prod.rule.at (0).index))
+		for (auto &first : firstAndFollows.GetFirstsOfRule (prod.rule, e_index)) // firsts.at (prod.rule.at (0).index))
 		{
 			if (first != e_index)
 				table.at (var_key_to_index.at (prod.var)).at (term_key_to_index.at (first)).insert (index);
-		
 		}
 		// 3. If e is in FIRST(a'), add A->a' to M[A, b] for each terminal b in FOLLOW(A).
 		// If e is in FIRST(a') and $ is in FOLLOW(A), add A->a to[A, $].
 
 		bool first_contains_epsilon = false;
 		if (prod.rule.at (0).index == e_index) first_contains_epsilon = true;
-		for (auto &first : firstAndFollows.GetFirstsOfRule(prod.rule, e_index))// firsts.at (prod.rule.at (0).index))
+		for (auto &first : firstAndFollows.GetFirstsOfRule (prod.rule, e_index)) // firsts.at (prod.rule.at (0).index))
 		{
 			if (first == e_index) first_contains_epsilon = true;
 		}
@@ -1162,7 +1193,7 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 			for (auto &index : terms)
 			{
 				fmt::print (ofh.FP (), "{}", index);
-				if (count_index++ != terms.size() - 1) fmt::print(ofh.FP(), " | ");
+				if (count_index++ != terms.size () - 1) fmt::print (ofh.FP (), " | ");
 			}
 			fmt::print (ofh.FP (), ", ");
 		}
@@ -1254,7 +1285,7 @@ void MassageGrammar (std::string grammar_fileName, std::string out_name = std::s
 
 int main ()
 {
-	//MassageGrammar ("grammars/simple.txt", "simple");
+	// MassageGrammar ("grammars/simple.txt", "simple");
 	MassageGrammar ("grammars/grammar_shorthand.txt", "pascal");
 	return 0;
 }

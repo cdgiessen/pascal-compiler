@@ -1,156 +1,156 @@
 TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + - if then else while do .. $ 
-(0) program_statement -> {program } ['$']
-	(0.40)	program id ( identifier_list ) ; program_statement_factoring 
-	
-(1) identifier_list ->{id } [')']
-	(1.16)	id identifier_list_prime 
-	
-(2) declarations -> {var } ['procedure', 'begin']
-	(2.20)	var id : type ; declarations_prime 
-	
-(3) subprogram_declarations -> {procedure } ['begin']
-	(3.23)	subprogram_declaration ; subprogram_declarations_prime 
-	
-(4) compound_statement -> {begin }[';', '.']
-	(4.43)	begin compound_statement_factoring 
-	
-(5) type ->{array, integer, real } [')', ';']
+(0) program_statement ->	{Firsts: 'program'}	{Follows: '$'}
+	(0.40)	program id ( identifier_list ) ; program_statement_f 
+
+(1) identifier_list ->	{Firsts: 'id'}	{Follows: ')'}
+	(1.16)	id identifier_list_p 
+
+(2) declarations ->	{Firsts: 'var'}	{Follows: 'procedure', 'begin'}
+	(2.20)	var id : type ; declarations_p 
+
+(3) subprogram_declarations ->	{Firsts: 'procedure'}	{Follows: 'begin'}
+	(3.23)	subprogram_declaration ; subprogram_declarations_p 
+
+(4) compound_statement ->	{Firsts: 'begin'}	{Follows: ';', '.'}
+	(4.43)	begin compound_statement_f 
+
+(5) type ->	{Firsts: 'array', 'integer', 'real'}	{Follows: ';'}
 	(5.0)	standard_type 
 	(5.1)	array [ num .. num ] of standard_type 
-	
-(6) standard_type -> {integer, real} [')', ';']
+
+(6) standard_type ->	{Firsts: 'integer', 'real'}	{Follows: ';'}
 	(6.2)	integer 
 	(6.3)	real 
-	
-(7) subprogram_declaration ->  {procedure } [';']
-	(7.46)	subprogram_head subprogram_declaration_factoring 
-	
-(8) subprogram_head -> {procedure } [ 'var', 'procedure', 'begin']
-	(8.49)	procedure id subprogram_head_factoring 
-	
-(9) arguments -> {(} [';']
+
+(7) subprogram_declaration ->	{Firsts: 'procedure'}	{Follows: ';'}
+	(7.46)	subprogram_head subprogram_declaration_f 
+
+(8) subprogram_head ->	{Firsts: 'procedure'}	{Follows: 'var', 'procedure', 'begin'}
+	(8.49)	procedure id subprogram_head_f 
+
+(9) arguments ->	{Firsts: '('}	{Follows: ';'}
 	(9.4)	( parameter_list ) 
-	
-(10) parameter_list -> {id} [')']
-	(10.25)	id : type parameter_list_prime 
-	
-(11) optional_statements -> { id, while, begin, if, call } [ 'end']
+
+(10) parameter_list ->	{Firsts: 'id'}	{Follows: ')'}
+	(10.25)	id : type parameter_list_p 
+
+(11) optional_statements ->	{Firsts: 'id', 'begin', 'call', 'if', 'while'}	{Follows: 'end'}
 	(11.5)	statement_list 
-	
-(12) statement_list ->{id, while, begin, if, call  } [ 'end']
-	(12.28)	statement statement_list_prime 
-	
-(13) statement ->{id, while, begin, if, call } [';', 'else']
+
+(12) statement_list ->	{Firsts: 'id', 'begin', 'call', 'if', 'while'}	{Follows: 'end'}
+	(12.28)	statement statement_list_p 
+
+(13) statement ->	{Firsts: 'id', 'begin', 'call', 'if', 'while'}	{Follows: ';', 'end', 'else'}
 	(13.6)	variable assignop expression 
 	(13.7)	procedure_statement 
 	(13.8)	while expression do statement 
-	(13.52)	begin statement_factoring 
-	(13.55)	if expression then statement statement_factoring_factoring 
-	
-(14) variable ->{ id} ['assignop']
-	(14.58)	id variable_factoring 
-	
-(15) expression -> {+, -, id, num, (, not} [')', ';', ']', ',', 'then', 'else', 'do']
-	(15.61)	simple_expression expression_factoring 
-	
-(16) procedure_statement -> {call} [';', 'else']
-	(16.64)	call id procedure_statement_factoring 
-	
-(17) expression_list -> {+, -, id, num, (, not} [')']
-	(17.31)	expression expression_list_prime 
-	
-(18) simple_expression -> {+, -, id, num, (, not}  [')', ';', ']', ',', 'relop', 'then', 'else', 'do']
-	(18.34)	term simple_expression_prime 
-	(18.35)	sign term simple_expression_prime 
-	
-(19) term -> {id, num, (, not} ['addop']
-	(19.38)	factor term_prime 
-	
-(20) sign -> { +, - } ['id', '(', 'num', 'not']
+	(13.52)	begin statement_f 
+	(13.55)	if expression then statement statement_f_f 
+
+(14) variable ->	{Firsts: 'id'}	{Follows: 'assignop'}
+	(14.58)	id variable_f 
+
+(15) expression ->	{Firsts: 'id', '(', 'num', 'not', '+', '-'}	{Follows: ')', ';', ']', 'end', ',', 'then', 'else', 'do'}
+	(15.61)	simple_expression expression_f 
+
+(16) procedure_statement ->	{Firsts: 'call'}	{Follows: ';', 'end', 'else'}
+	(16.64)	call id procedure_statement_f 
+
+(17) expression_list ->	{Firsts: 'id', '(', 'num', 'not', '+', '-'}	{Follows: ')'}
+	(17.31)	expression expression_list_p 
+
+(18) simple_expression ->	{Firsts: 'id', '(', 'num', 'not', '+', '-'}	{Follows: ')', ';', ']', 'end', ',', 'relop', 'then', 'else', 'do'}
+	(18.34)	term simple_expression_p 
+	(18.35)	sign term simple_expression_p 
+
+(19) term ->	{Firsts: 'id', '(', 'num', 'not'}	{Follows: ')', ';', ']', 'end', ',', 'relop', 'addop', 'then', 'else', 'do'}
+	(19.38)	factor term_p 
+
+(20) sign ->	{Firsts: '+', '-'}	{Follows: 'id', '(', 'num', 'not'}
 	(20.13)	+ 
 	(20.14)	- 
-	
-(21) factor -> {id, num, (, not } ['mulop']
+
+(21) factor ->	{Firsts: 'id', '(', 'num', 'not'}	{Follows: ')', ';', ']', 'end', ',', 'relop', 'addop', 'mulop', 'then', 'else', 'do'}
 	(21.9)	id 
 	(21.10)	num 
 	(21.11)	( expression ) 
 	(21.12)	not factor 
-	
-(22) identifier_list_prime -> {, , e} [')']
+
+(22) identifier_list_p ->	{Firsts: ',', e}	{Follows: ')'}
 	(22.15)	e 
-	(22.17)	, id identifier_list_prime 
-	
-(23) declarations_prime -> {var, e} ['procedure', 'begin']
+	(22.17)	, id identifier_list_p 
+
+(23) declarations_p ->	{Firsts: 'var', e}	{Follows: 'procedure', 'begin'}
 	(23.18)	e 
-	(23.19)	var id : type ; declarations_prime 
-	
-(24) subprogram_declarations_prime -> {procedure, e } ['begin']
+	(23.19)	var id : type ; declarations_p 
+
+(24) subprogram_declarations_p ->	{Firsts: 'procedure', e}	{Follows: 'begin'}
 	(24.21)	e 
-	(24.22)	subprogram_declaration ; subprogram_declarations_prime 
-	
-(25) parameter_list_prime -> {;, e } [')']
+	(24.22)	subprogram_declaration ; subprogram_declarations_p 
+
+(25) parameter_list_p ->	{Firsts: ';', e}	{Follows: ')'}
 	(25.24)	e 
-	(25.26)	; id : type parameter_list_prime 
-	
-(26) statement_list_prime -> {;, e } ['end']
+	(25.26)	; id : type parameter_list_p 
+
+(26) statement_list_p ->	{Firsts: ';', e}	{Follows: 'end'}
 	(26.27)	e 
-	(26.29)	; statement statement_list_prime 
-	
-(27) expression_list_prime -> {, , e} [')']
+	(26.29)	; statement statement_list_p 
+
+(27) expression_list_p ->	{Firsts: ',', e}	{Follows: ')'}
 	(27.30)	e 
-	(27.32)	, expression expression_list_prime 
-	
-(28) simple_expression_prime -> {addop, e} [')', ';', ']', ',', 'relop', 'then', 'else', 'do']
+	(27.32)	, expression expression_list_p 
+
+(28) simple_expression_p ->	{Firsts: 'addop', e}	{Follows: ')', ';', ']', 'end', ',', 'relop', 'then', 'else', 'do'}
 	(28.33)	e 
-	(28.36)	addop term simple_expression_prime 
-	
-(29) term_prime -> {mulop, e} ['addop']
+	(28.36)	addop term simple_expression_p 
+
+(29) term_p ->	{Firsts: 'mulop', e}	{Follows: ')', ';', ']', 'end', ',', 'relop', 'addop', 'then', 'else', 'do'}
 	(29.37)	e 
-	(29.39)	mulop factor term_prime 
-	
-(30) program_statement_factoring -> {procedure, begin, var} ['$']
+	(29.39)	mulop factor term_p 
+
+(30) program_statement_f ->	{Firsts: 'var', 'procedure', 'begin'}	{Follows: '$'}
 	(30.41)	subprogram_declarations compound_statement . 
 	(30.42)	compound_statement . 
-	(30.67)	declarations program_statement_factoring_factoring 
-	
-(31) compound_statement_factoring -> {end, id, while, begin, if, call } [';', '.']
+	(30.67)	declarations program_statement_f_f 
+
+(31) compound_statement_f ->	{Firsts: 'id', 'begin', 'end', 'call', 'if', 'while'}	{Follows: ';', '.'}
 	(31.44)	optional_statements end 
 	(31.45)	end 
-	
-(32) subprogram_declaration_factoring -> {procedure, begin, var} [';']
+
+(32) subprogram_declaration_f ->	{Firsts: 'var', 'procedure', 'begin'}	{Follows: ';'}
 	(32.47)	subprogram_declarations compound_statement 
 	(32.48)	compound_statement 
-	(32.70)	declarations subprogram_declaration_factoring_factoring 
-	
-(33) subprogram_head_factoring -> {(, ; } ['var', 'procedure', 'begin']
+	(32.70)	declarations subprogram_declaration_f_f 
+
+(33) subprogram_head_f ->	{Firsts: '(', ';'}	{Follows: 'var', 'procedure', 'begin'}
 	(33.50)	arguments ; 
 	(33.51)	; 
-	
-(34) statement_factoring -> {end , id, while, begin, if, call } [';', 'else']
+
+(34) statement_f ->	{Firsts: 'id', 'begin', 'end', 'call', 'if', 'while'}	{Follows: ';', 'end', 'else'}
 	(34.53)	optional_statements end 
 	(34.54)	end 
-	
-(35) statement_factoring_factoring -> {else, e } [';', 'else']
+
+(35) statement_f_f ->	{Firsts: 'else', e}	{Follows: ';', 'end', 'else'}
 	(35.56)	else statement 
 	(35.57)	e 
-	
-(36) variable_factoring -> {[, e} ['assignop']
+
+(36) variable_f ->	{Firsts: '[', e}	{Follows: 'assignop'}
 	(36.59)	e 
 	(36.60)	[ expression ] 
-	
-(37) expression_factoring -> {relop, e} [')', ';', ']', ',', 'then', 'else', 'do']
+
+(37) expression_f ->	{Firsts: 'relop', e}	{Follows: ')', ';', ']', 'end', ',', 'then', 'else', 'do'}
 	(37.62)	e 
 	(37.63)	relop simple_expression 
-	
-(38) procedure_statement_factoring -> {(, e} [';', 'else']
+
+(38) procedure_statement_f ->	{Firsts: '(', e}	{Follows: ';', 'end', 'else'}
 	(38.65)	e 
 	(38.66)	( expression_list ) 
-	
-(39) program_statement_factoring_factoring -> {procedure, begin } ['$']
+
+(39) program_statement_f_f ->	{Firsts: 'procedure', 'begin'}	{Follows: '$'}
 	(39.68)	subprogram_declarations compound_statement . 
 	(39.69)	compound_statement . 
-	
-(40) subprogram_declaration_factoring_factoring -> {procedure, begin } {Follows: ';'}
+
+(40) subprogram_declaration_f_f ->	{Firsts: 'procedure', 'begin'}	{Follows: ';'}
 	(40.71)	subprogram_declarations compound_statement 
 	(40.72)	compound_statement 
-	
+

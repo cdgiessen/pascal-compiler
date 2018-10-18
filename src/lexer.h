@@ -1,11 +1,7 @@
 #pragma once
 
 #include <algorithm>
-#include <any>
-#include <array>
-#include <fstream>
 #include <functional>
-#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -13,15 +9,8 @@
 #include <variant>
 #include <vector>
 
-#include <cctype>
-#include <cstdio>
-#include <cstring>
-
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-
-#include "OutputFileHandler.h"
 #include "enumstring.h"
+#include "common.h"
 
 
 constexpr int line_buffer_length = 72;
@@ -280,32 +269,6 @@ template <> struct hash<ReservedWord>
 
 using ReservedWordList = std::unordered_set<ReservedWord>;
 
-class SymbolTable
-{
-	public:
-	int AddSymbol (std::string_view symbol)
-	{
-		int i = 0;
-		for (i = 0; i < symbols.size (); i++)
-		{
-			if (symbol == symbols[i]) return i;
-		}
-		symbols.push_back (std::string (symbol));
-		return i;
-	}
-
-	int GetSymbolLocation (std::string_view symbol)
-	{
-		for (int i = 0; i < symbols.size (); i++)
-		{
-			if (symbol == symbols[i]) return i;
-		}
-		return -1;
-	}
-
-	private:
-	std::vector<std::string> symbols;
-};
 
 struct LexerMachineReturn
 {
@@ -324,14 +287,10 @@ struct LexerMachineReturn
 
 struct LexerContext
 {
+	LexerContext(CompilationContext& compContext): compContext(compContext){}
 	bool isInComment = false;
 	bool isInLiteral = false;
-	ReservedWordList reservedWords;
-
-	SymbolTable symbolTable;
-	SymbolTable literalTable;
-
-	LexerContext (ReservedWordList reservedWords) : reservedWords (reservedWords) {}
+	CompilationContext& compContext;
 };
 
 using LexerMachineFuncSig =
@@ -347,33 +306,28 @@ struct LexerMachine
 	: name (name), precedence (precedence), machine (machine){};
 };
 
+class Lexer;
 class TokenStream
 {
 	public:
-	TokenStream (std::vector<TokenInfo> tokens, SymbolTable symbolTable)
-	: tokens (tokens), symbolTable (symbolTable)
-	{
-	}
+	TokenStream (Lexer& lexer, CompilationContext& compilationContext);
 
-	TokenInfo Current () const { return tokens.at (index); }
-	TokenInfo Advance ()
-	{
-		if (index + 1 <= tokens.size ()) index++;
-		return Current();
-	}
+	TokenInfo Current () const;
+	TokenInfo Advance ();
 
 	private:
 	int index = 0;
 	std::vector<TokenInfo> tokens;
-	SymbolTable symbolTable;
+	CompilationContext& compilationContext;
+	Lexer& lexer;
 };
 
 class Lexer
 {
 	public:
-	Lexer () : listing_file ("listing_file.txt"), token_file ("token_file.txt")
+	Lexer (Logger& logger) : logger(logger)
 	{
-		fmt::print (token_file.FP (), "{:^14}{:<14}{:<16}{:<14}\n", "Line No.", "Lexeme", "TOKEN-TYPE", "ATTRIBUTE");
+		ReadReservedWordsFile();
 		CreateMachines ();
 	}
 
@@ -382,20 +336,21 @@ class Lexer
 
 	void AddMachine (LexerMachine &&machine);
 
-	TokenStream GetTokens (ReservedWordList &list, std::vector<std::string> lines);
+	std::vector<TokenInfo> GetTokens (CompilationContext& context);
 
 	void TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachineReturn::OptionalToken content);
 
-	private:
-	std::vector<LexerMachine> machines;
 
-	OutputFileHandle listing_file;
-	OutputFileHandle token_file;
+	std::optional<TokenInfo> CheckReseredWords(std::string_view s);
+	std::optional<ReservedWord> GetReservedWord(std::string s);
+
+	void ReadReservedWordsFile();
+
+
+	std::vector<LexerMachine> machines;
+	ReservedWordList reservedWords;
+	Logger& logger;
 };
 
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
-std::optional<ReservedWord> GetReservedWord (std::string s);
-
-ReservedWordList ReadReservedWordsFile ();
-std::optional<TokenInfo> CheckReseredWords (ReservedWordList &list, std::string_view s);

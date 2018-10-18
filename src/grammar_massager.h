@@ -12,10 +12,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-
-#include "OutputFileHandler.h"
+#include "common.h"
 
 using Variable = int;
 using Terminal = int;

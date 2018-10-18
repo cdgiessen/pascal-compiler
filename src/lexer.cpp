@@ -1,5 +1,8 @@
 #include "lexer.h"
 
+#include <cctype>
+#include <cstring>
+
 template <>
 char const *enumStrings<TokenType>::data[] = {
 	"PROGRAM",
@@ -88,16 +91,16 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 	if (t.index () == 2) return os << enumToString (std::get<2> (t));
 	if (t.index () == 3) return os << enumToString (std::get<3> (t));
 	if (t.index () == 4) return os << enumToString (std::get<4> (t));
-	if (t.index () == 5) return os << enumToString(std::get<5> (t));
+	if (t.index () == 5) return os << enumToString (std::get<5> (t));
 	if (t.index () == 6) return os << std::get<6> (t);
 	if (t.index () == 7) return os << std::get<7> (t);
 	if (t.index () == 8) return os << std::get<8> (t);
 	if (t.index () == 9) return os << std::get<9> (t);
-	//if (t.index () == 10) return os << std::get<10> (t);
+	// if (t.index () == 10) return os << std::get<10> (t);
 	return os << "ATTRIB OSTREAM NOT UPDATED!";
 }
 
-std::optional<ReservedWord> GetReservedWord (std::string s)
+std::optional<ReservedWord> Lexer::GetReservedWord (std::string s)
 {
 	if (s == "program") return ReservedWord (s, TokenType::PROGRAM);
 	if (s == "var") return ReservedWord (s, TokenType::VARIABLE);
@@ -125,10 +128,8 @@ std::optional<ReservedWord> GetReservedWord (std::string s)
 	return {};
 }
 
-ReservedWordList ReadReservedWordsFile ()
+void Lexer::ReadReservedWordsFile ()
 {
-	ReservedWordList res_words;
-
 	std::ifstream reserved_word_file (std::string ("test_input/reserved_words.txt"));
 
 	if (reserved_word_file)
@@ -140,14 +141,14 @@ ReservedWordList ReadReservedWordsFile ()
 			reserved_word_file >> word >> token >> attribute;
 			auto res_word = GetReservedWord (word);
 			if (res_word.has_value ())
-				res_words.insert (res_word.value ());
+				reservedWords.insert (res_word.value ());
 			else
 				fmt::print ("Reserved word not found! {}\n", word);
 		}
 
-		fmt::print ("Res Word size = {}\n", res_words.size ());
+		fmt::print ("Res Word size = {}\n", reservedWords.size ());
 		fmt::print ("Reserved Words:\n");
-		for (auto &item : res_words)
+		for (auto &item : reservedWords)
 		{
 			fmt::print ("Word: {} \t {}\n", item.word, enumToString (item.type));
 		}
@@ -156,12 +157,11 @@ ReservedWordList ReadReservedWordsFile ()
 	{
 		fmt::print ("Reserved Word List not found!\n");
 	}
-	return res_words;
 }
 
-std::optional<TokenInfo> CheckReseredWords (ReservedWordList &list, std::string_view s)
+std::optional<TokenInfo> Lexer::CheckReseredWords (std::string_view s)
 {
-	for (auto &item : list)
+	for (auto &item : reservedWords)
 	{
 		if (item == s) return item.GetToken ();
 	}
@@ -180,9 +180,9 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 {
 	if (content.has_value ())
 	{
-		if (lexeme[0] == EOF) // EOF doesn't play nice in the output
+		if (lexeme[0] == '$') // EOF doesn't play nice in the output
 			lexeme = "EOF";
-		fmt::print (token_file.FP (),
+		fmt::print (logger.token_file.FP (),
 		"{:^14}{:<14}{:<4}{:<12}{:<4}{:<4}\n",
 		line_num,
 		lexeme,
@@ -190,8 +190,8 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 		enumToString ((content)->type),
 		(content)->attrib.index (),
 		(content)->attrib);
-		if ((content)->attrib.index () == 10) // lexer error
-		{ fmt::print (listing_file.FP (), "{:<8}{}\n", "LEXERR:", content->attrib); } }
+		if ((content)->attrib.index () == 9) // lexer error
+		{ fmt::print (logger.listing_file.FP (), "{:<8}{}\n", "LEXERR:", content->attrib); } }
 	else
 	{
 		// fmt::print (token_file.FP (), "{:^14}{:<14} {:<14}{:<4} (Unrecog Symbol)\n", line_num,
@@ -199,73 +199,78 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 	}
 }
 
-TokenStream Lexer::GetTokens (ReservedWordList &list, std::vector<std::string> lines)
+std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext)
 {
-	LexerContext context (list);
-
 	std::vector<TokenInfo> tokens;
-
-	int backward_index = 0;
-	int cur_line_number = 0;
-
-
-	for (auto &s_line : lines)
+	auto lines = compContext.dataSource.Read ();
+	if (lines.has_value ())
 	{
-		fmt::print (listing_file.FP (), "{:<8}{}\n", cur_line_number, s_line);
-		while (backward_index < s_line.size ())
+		LexerContext context (compContext);
+
+
+		int backward_index = 0;
+		int cur_line_number = 0;
+
+
+		for (auto &s_line : lines.value ())
 		{
-			std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
-
-			auto iter = std::begin (machines);
-			std::optional<LexerMachineReturn> machine_ret = {};
-			while (!machine_ret.has_value () && iter != std::end (machines))
+			fmt::print (logger.listing_file.FP (), "{:<8}{}\n", cur_line_number, s_line);
+			while (backward_index < s_line.size ())
 			{
-				machine_ret = iter->machine (context, buffer);
+				std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
 
-				iter++;
-			}
-			if (machine_ret.has_value ())
-			{
-				if (machine_ret->chars_to_eat > 0 && machine_ret->chars_to_eat < line_buffer_length)
+				auto iter = std::begin (machines);
+				std::optional<LexerMachineReturn> machine_ret = {};
+				while (!machine_ret.has_value () && iter != std::end (machines))
 				{
+					machine_ret = iter->machine (context, buffer);
 
-					backward_index += machine_ret->chars_to_eat;
-					if (machine_ret->content.has_value ())
+					iter++;
+				}
+				if (machine_ret.has_value ())
+				{
+					if (machine_ret->chars_to_eat > 0 && machine_ret->chars_to_eat < line_buffer_length)
 					{
-						TokenFilePrinter (
-						cur_line_number, buffer.substr (0, machine_ret->chars_to_eat), machine_ret->content);
 
-						machine_ret->content->line_location = cur_line_number;
-						machine_ret->content->column_location = backward_index;
+						backward_index += machine_ret->chars_to_eat;
+						if (machine_ret->content.has_value ())
+						{
+							TokenFilePrinter (cur_line_number,
+							buffer.substr (0, machine_ret->chars_to_eat),
+							machine_ret->content);
 
-						tokens.push_back (*machine_ret->content);
+							machine_ret->content->line_location = cur_line_number;
+							machine_ret->content->column_location = backward_index - machine_ret->chars_to_eat;
+
+							tokens.push_back (*machine_ret->content);
+						}
 					}
 				}
-			}
-			else
-			{
-				std::string bad_symbol;
-				bad_symbol.push_back (buffer[0]);
+				else
+				{
+					std::string bad_symbol;
+					bad_symbol.push_back (buffer[0]);
 
-				machine_ret = LexerMachineReturn (1,
-				TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Unrecognized_Symbol, bad_symbol)));
+					machine_ret = LexerMachineReturn (1,
+					TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Unrecognized_Symbol, bad_symbol)));
 
-				if (buffer[0] == EOF)
-					fmt::print (listing_file.FP (), "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
-				// else
-				//	fmt::print (
-				//	listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
+					if (buffer[0] == '$')
+						fmt::print (logger.listing_file.FP (), "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
+					// else
+					//	fmt::print (
+					//	listing_file.FP (), "{:<8}{}\t{}\n", "LEXERR:", "Unrecognized Symbol: ", buffer[0]);
 
-				TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
-				tokens.push_back (*machine_ret->content);
-				backward_index++;
-			}
-			if (machine_ret.has_value () && machine_ret->content->type == TokenType::END_FILE)
-			{ break; } }
-		cur_line_number++;
-		backward_index = 0;
+					TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
+					tokens.push_back (*machine_ret->content);
+					backward_index++;
+				}
+				if (machine_ret.has_value () && machine_ret->content->type == TokenType::END_FILE)
+				{ break; } }
+			cur_line_number++;
+			backward_index = 0;
+		}
 	}
-	return TokenStream (tokens, context.symbolTable);
+	return tokens;
 }
 
 void Lexer::CreateMachines ()
@@ -349,7 +354,7 @@ void Lexer::CreateMachines ()
 	             } });
 
 	AddMachine (
-	{ "IdRes", 90, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	{ "IdRes", 90, [&](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		 if (line.size () < 1 || !std::isalpha (line[0])) return {};
 
 		 int index = 0;
@@ -362,9 +367,9 @@ void Lexer::CreateMachines ()
 			 return LexerMachineReturn (index,
 			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Id_TooLong, std::string (sv))));
 
-		 auto res_word = CheckReseredWords (context.reservedWords, sv);
+		 auto res_word = CheckReseredWords (sv);
 		 if (res_word.has_value ()) { return LexerMachineReturn (index, res_word.value ()); }
-		 int loc = context.symbolTable.AddSymbol (sv);
+		 int loc = context.compContext.symbolTable.AddSymbol (sv);
 		 return LexerMachineReturn (index, TokenInfo (TokenType::ID, SymbolType (loc)));
 	 } });
 
@@ -401,7 +406,7 @@ void Lexer::CreateMachines ()
 				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::plus));
 			 if (line[0] == '-')
 				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::minus));
-			 if (line[0] == EOF)
+			 if (line[0] == '$')
 				 return LexerMachineReturn (1, TokenInfo (TokenType::END_FILE, NoAttrib{}));
 		 }
 		 return {};
@@ -502,7 +507,7 @@ void Lexer::CreateMachines ()
 			 LexerError (LexerErrorEnum::LReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
 
-		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType(fval)));
+		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType (fval)));
 	 } });
 
 	AddMachine (
@@ -562,7 +567,7 @@ void Lexer::CreateMachines ()
 			 LexerError (LexerErrorEnum::SReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
 
-		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType(fval)));
+		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType (fval)));
 	 } });
 
 	AddMachine (
@@ -623,4 +628,24 @@ void Lexer::CreateMachines ()
 			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::equal));
 		 return {};
 	 } });
+}
+
+TokenStream::TokenStream (Lexer &lexer, CompilationContext &compilationContext)
+: compilationContext (compilationContext), lexer (lexer)
+{
+	auto &new_tokens = lexer.GetTokens (compilationContext);
+	tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
+}
+
+TokenInfo TokenStream::Current () const { return tokens.at (index); }
+TokenInfo TokenStream::Advance ()
+{
+	if (index + 1 >= tokens.size ())
+	{
+		auto new_tokens = lexer.GetTokens (compilationContext);
+		if (new_tokens.size () > 0)
+			tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
+	}
+	if (index + 1 < tokens.size ()) index++;
+	return Current ();
 }

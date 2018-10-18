@@ -3,53 +3,38 @@
 
 #include "parser.h"
 
+class Compiler
+{
+	public:
+	Compiler () : logger (), lexer (logger), parser (logger) {}
 
+	void Compile (CompilationContext &context)
+	{
+		TokenStream ts (lexer, context);
+		parser.Parse (ParserContext (ts, logger));
+	}
+
+	Logger logger;
+	Lexer lexer;
+	PascalParser parser;
+};
 
 
 int main (int argc, char *argv[])
 {
-	auto reserved_words = ReadReservedWordsFile ();
-
 	std::vector<std::string> file_list;
 	file_list.push_back ("test_input/test_passing.txt");
 	// file_list.push_back("test_input/test_error.txt");
 
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
 
-	Lexer lexer;
-	// lexer.LoadReservedWords (reserved_words);
+	Compiler compiler;
 
+	FileReader fileReader (compiler.logger, file_list);
 
-	try
-	{
+	CompilationContext context (fileReader);
 
-		std::fstream inFile (file_list.at (0), std::ios::in);
-		if (inFile)
-		{
-			std::vector<std::string> lines;
-			int cur_line_number = 1;
-			while (inFile.good ())
-			{
-				std::string line;
+	compiler.Compile(context);
 
-				std::getline (inFile, line, '\n');
-				lines.push_back (line);
-
-				cur_line_number++;
-			}
-			lines.back ().push_back (EOF);
-			ParserContext pc (lexer.GetTokens (reserved_words, lines), "parser_output.txt");
-			PascalParser parser (pc);
-			parser.Parse ();
-		}
-		else
-		{
-			fmt::print ("File not read, was there an error?");
-		}
-	}
-	catch (const std::exception &e)
-	{
-		fmt::print ("Exception {}", e.what ());
-	}
 	return 0;
 }
