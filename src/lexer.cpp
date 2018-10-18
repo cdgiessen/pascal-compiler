@@ -88,12 +88,12 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 	if (t.index () == 2) return os << enumToString (std::get<2> (t));
 	if (t.index () == 3) return os << enumToString (std::get<3> (t));
 	if (t.index () == 4) return os << enumToString (std::get<4> (t));
-	if (t.index () == 5) return os << enumToString (std::get<5> (t));
+	if (t.index () == 5) return os << enumToString(std::get<5> (t));
 	if (t.index () == 6) return os << std::get<6> (t);
 	if (t.index () == 7) return os << std::get<7> (t);
 	if (t.index () == 8) return os << std::get<8> (t);
 	if (t.index () == 9) return os << std::get<9> (t);
-	if (t.index () == 10) return os << std::get<10> (t);
+	//if (t.index () == 10) return os << std::get<10> (t);
 	return os << "ATTRIB OSTREAM NOT UPDATED!";
 }
 
@@ -502,7 +502,7 @@ void Lexer::CreateMachines ()
 			 LexerError (LexerErrorEnum::LReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
 
-		 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (fval)));
+		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType(fval)));
 	 } });
 
 	AddMachine (
@@ -562,7 +562,7 @@ void Lexer::CreateMachines ()
 			 LexerError (LexerErrorEnum::SReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
 
-		 return LexerMachineReturn (i, TokenInfo (TokenType::REAL, FloatType (fval)));
+		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType(fval)));
 	 } });
 
 	AddMachine (
@@ -601,7 +601,7 @@ void Lexer::CreateMachines ()
 			 return LexerMachineReturn (i,
 			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Int_InvalidNumericLiteral, seq)));
 		 }
-		 return LexerMachineReturn (i, TokenInfo (TokenType::INTEGER, IntType (val)));
+		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType (val)));
 	 } });
 
 	AddMachine (

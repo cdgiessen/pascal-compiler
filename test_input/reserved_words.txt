@@ -18,3 +18,4 @@ or			or			1
 div			div			1
 mod			mod			2
 and			and			3
+call		call		0

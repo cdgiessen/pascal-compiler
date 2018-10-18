@@ -1,0 +1,98 @@
+//shortened original grammar
+
+//terminals 
+TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin end call , relop addop assignop mulop not + - if then else while do .. 
+
+//non terminals & productions
+
+prog_stmt -> 
+    program id ( id_list ) ; decls sp_decls comp_stmt .
+
+id_list ->
+    id
+    id_list , id
+
+decls ->
+    decls var id : type ;
+    e
+
+type ->
+    standard_type
+    array [ num .. num ] of standard_type
+
+standard_type ->
+    integer
+    real
+
+sp_decls ->
+    sp_decls sp_decl ;
+    e
+
+sp_decl ->
+    sp_head decls sp_decls comp_stmt
+
+sp_head ->
+    procedure id args ;
+
+args ->
+    ( p_list )
+    e
+
+p_list ->
+    id : type
+    p_list ; id : type
+
+comp_stmt ->
+    begin opt_stmt end
+
+opt_stmt ->
+    stmt_list
+    e
+
+stmt_list ->
+    stmt
+    stmt_list ; stmt
+
+stmt ->
+    variable assignop expr
+    proc_stmt
+    comp_stmt
+    if expr then stmt else stmt
+	if expr then stmt
+    while expr do stmt
+
+variable ->
+    id
+    id [ expr ]
+
+proc_stmt ->
+    call id
+    call id ( expr_list )
+
+expr_list ->
+    expr
+    expr_list , expr
+
+expr ->
+    simp_expr
+    simp_expr relop simp_expr
+
+simp_expr ->
+    term
+    sign term
+    simp_expr addop term
+
+term ->
+    factor
+    term mulop factor
+
+factor ->
+    id
+    num
+    ( expr )
+    not factor
+
+sign ->
+    +
+    -
+

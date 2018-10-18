@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <stack>
+#include <vector>
 
 #include "lexer.h"
 
@@ -28,9 +28,12 @@ class PascalParser
 	void Parse ();
 
 	private:
+	using TT = TokenType;
+
 	ParserContext &pc;
 
-	void Match (TokenType tt);
+	void Match(TT tt);
+	void Match (std::vector<TT> match_set);
 	void HaltParse ();
 	void Synch (std::vector<TokenType> set);
 
@@ -68,8 +71,8 @@ class PascalParser
 	void CompoundStatementFactored ();
 	void SubprogramDeclarationFactored ();
 	void SubprogramHeadFactored ();
-	void StatementFactoredOne ();
-	void StatementFactoredTwo ();
+	void StatementFactoredBegin();
+	void StatementFactoredElse();
 	void VariableFactored ();
 	void ExpressionFactored ();
 	void ProcedureStatmentFactored ();

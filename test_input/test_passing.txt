@@ -1,22 +1,33 @@
 program example(input, output);
+
 var x: integer;
-procedure gcd(a, b: integer);
+var y: array [0 .. 10] of real;
+var z: array [0 .. 10] of integer;
+
+procedure gcd(a: integer ; b: integer);
 begin
-	if b = 0 then gcd := a
-	else gcd := call gcd(b, a mod b)
+	if b = 0 then gcd := a;
+	call gcd(b, a mod b)
+end;
+
+procedure gcd(a: integer ; b: integer);
+var x: real;
+begin
+	if b = 0 then gcd := a;
+	call gcd(b, a mod b)
+end;
+
+procedure gcd(a: integer ; b: integer);
+procedure inner(); begin end;
+procedure inner; begin end;
+begin
+	if b = 0 then gcd := a;
+	call gcd(b, a mod b)
 end;
 
 begin
 	x:= 1;
-	x:= 1.2;
-	x:= 1.2E3;
-	x:= y;
-
-	{read(x,y);comment}
-	{
-	multiline comment
-	}
-	{write(gcd(x,y))}
+	x:= 1*1+1/1-1;
 
 	if(x > 5 and x < 100 or y >= 0 and not y <= 100) then x:= 5 else x:= x
 	do x:= x + 1 while x <> 10

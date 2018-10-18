@@ -138,27 +138,39 @@ enum class StandardTypeEnum
 	real
 };
 
-struct IntType
-{
-	int val;
-	IntType (int a) : val (a) {}
+struct NumType {
+	std::variant<int, float> val;
+	NumType(int a ):val(a){}
+	NumType(float a):val(a){}
 
-	friend std::ostream &operator<< (std::ostream &os, const IntType &t)
+	friend std::ostream &operator<< (std::ostream &os, const NumType &t)
 	{
-		return os << t.val << "(INT)";
+		if(t.val.index() == 0) return os << std::get<0>(t.val) << "(INT)";
+		if (t.val.index() == 1) return os << std::get<1>(t.val) << "(FLOAT)";
 	}
 };
 
-struct FloatType
-{
-	float val;
-	FloatType (float a) : val (a) {}
-
-	friend std::ostream &operator<< (std::ostream &os, const FloatType &t)
-	{
-		return os << t.val << "(FLOAT)";
-	}
-};
+//struct IntType
+//{
+//	int val;
+//	IntType (int a) : val (a) {}
+//
+//	friend std::ostream &operator<< (std::ostream &os, const IntType &t)
+//	{
+//		return os << t.val << "(INT)";
+//	}
+//};
+//
+//struct FloatType
+//{
+//	float val;
+//	FloatType (float a) : val (a) {}
+//
+//	friend std::ostream &operator<< (std::ostream &os, const FloatType &t)
+//	{
+//		return os << t.val << "(FLOAT)";
+//	}
+//};
 
 struct StringLiteral
 {
@@ -214,7 +226,7 @@ struct LexerError
 };
 
 using TokenAttribute =
-std::variant<NoAttrib, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, StandardTypeEnum, IntType, FloatType, SymbolType, StringLiteral, LexerError>;
+std::variant<NoAttrib, AddOpEnum, MulOpEnum, SignOpEnum, RelOpEnum, StandardTypeEnum, NumType, SymbolType, StringLiteral, LexerError>;
 
 std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
 
@@ -347,6 +359,7 @@ class TokenStream
 	TokenInfo Advance ()
 	{
 		if (index + 1 <= tokens.size ()) index++;
+		return Current();
 	}
 
 	private:

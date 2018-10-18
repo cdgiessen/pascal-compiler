@@ -17,38 +17,62 @@ PascalParser::PascalParser (ParserContext &context) : pc (context) {}
 void PascalParser::Parse ()
 {
 	ProgramStatement ();
-	Match (TokenType::END_FILE);
+	Match (TT::END_FILE);
 }
-void PascalParser::Match (TokenType tt)
+void PascalParser::Match (TT tt)
 {
 	using namespace std::string_literals;
-	if (tt == pc.Current ().type && tt != TokenType::END_FILE)
-	{
+
+	if (tt == pc.Current ().type && tt != TT::END_FILE)
+
 		pc.Advance ();
-		int a = 456;
-	}
-	else if (tt == pc.Current ().type && tt == TokenType::END_FILE)
-	{
+
+	else if (tt == pc.Current ().type && tt == TT::END_FILE)
+
 		HaltParse ();
-		int a = 45645;
-	}
+
 	else if (tt != pc.Current ().type)
 	{
-		pc.LogError ("SE: Expected "s + tt + ", Recieved "s + pc.Current ().type +
-		             "\n\t Error at line " + std::to_string (pc.Current ().line_location) + ":" +
-		             std::to_string (pc.Current ().column_location));
+		pc.LogError ("SE: Expected "s + tt + ", Recieved "s + pc.Current ().type
+		             + "\n\t Error at line " + std::to_string (pc.Current ().line_location) + ":"
+		             + std::to_string (pc.Current ().column_location));
 		pc.Advance ();
+	}
+}
+
+void PascalParser::Match (std::vector<TT> match_set)
+{
+	using namespace std::string_literals;
+	for (auto &tt : match_set)
+	{
+		if (tt == pc.Current ().type && tt != TT::END_FILE)
+
+			pc.Advance ();
+
+		else if (tt == pc.Current ().type && tt == TT::END_FILE)
+
+			HaltParse ();
+
+		else if (tt != pc.Current ().type)
+		{
+			pc.LogError ("SE: Expected "s + tt + ", Recieved "s + pc.Current ().type
+			             + "\n\t Error at line " + std::to_string (pc.Current ().line_location)
+			             + ":" + std::to_string (pc.Current ().column_location));
+			pc.Advance ();
+		}
 	}
 }
 
 void PascalParser::HaltParse ()
 {
 	// stop i guess?
+	pc.LogError ("HALT");
 }
 
-void PascalParser::Synch (std::vector<TokenType> set)
+void PascalParser::Synch (std::vector<TT> set)
 {
-	TokenType tt = pc.Current ().type;
+	if (set.size () == 0) return;
+	TT tt = pc.Current ().type;
 	bool found = false;
 	while (!found)
 	{
@@ -58,213 +82,385 @@ void PascalParser::Synch (std::vector<TokenType> set)
 	}
 }
 
+
 void PascalParser::ProgramStatement ()
 {
-	Match (TokenType::PROGRAM);
-	Match (TokenType::ID);
-	Match (TokenType::PAREN_OPEN);
-	IdentifierList ();
-	Match (TokenType::PAREN_CLOSE);
-	Match (TokenType::SEMICOLON);
-	ProgramStatementFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::PROGRAM):
+			Match ({ TT::PROGRAM, TT::ID, TT::PAREN_OPEN });
+			IdentifierList ();
+			Match ({ TT::PAREN_CLOSE, TT::SEMICOLON });
+			ProgramStatementFactored ();
+			break;
+		default:
+			Synch ({ TT::END_FILE });
+	}
 }
 
 void PascalParser::IdentifierList ()
 {
-	Match (TokenType::ID);
-	IdentifierListPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::ID):
+			Match (TT::ID);
+			IdentifierListPrime ();
+			break;
+
+		default:
+			Synch ({ TT::PAREN_CLOSE });
+	}
 }
 void PascalParser::Declarations ()
 {
-	Match (TokenType::VARIABLE);
-	Match (TokenType::ID);
-	Match (TokenType::COLON);
-	Type ();
-	Match (TokenType::SEMICOLON);
-	DeclarationsPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::VARIABLE):
+			Match (TT::VARIABLE);
+			Match (TT::ID);
+			Match (TT::COLON);
+			Type ();
+			Match (TT::SEMICOLON);
+			DeclarationsPrime ();
+			break;
+
+		default:
+			Synch ({ TT::PROCEDURE, TT::BEGIN });
+	}
 }
 void PascalParser::SubprogramDeclarations ()
 {
-	SubprogramDeclaration ();
-	Match (TokenType::SEMICOLON);
-	SubprogramDeclarationsPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::PROCEDURE):
+			SubprogramDeclaration ();
+			Match (TT::SEMICOLON);
+			SubprogramDeclarationsPrime ();
+			break;
+
+		default:
+			Synch ({ TT::BEGIN });
+	}
 }
 void PascalParser::CompoundStatement ()
 {
-	Match (TokenType::BEGIN);
-	CompoundStatementFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::BEGIN):
+			Match (TT::BEGIN);
+			CompoundStatementFactored ();
+			break;
+
+		default:
+			Synch ({ TT::SEMICOLON, TT::DOT });
+	}
 }
 void PascalParser::Type ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::ARRAY):
-			Match (TokenType::ARRAY);
-			Match (TokenType::BRACKET_OPEN);
-			Match (TokenType::NUM);
-			Match (TokenType::DOT_DOT);
-			Match (TokenType::NUM);
-			Match (TokenType::BRACKET_CLOSE);
-			Match (TokenType::OF);
+		case (TT::ARRAY):
+			Match (TT::ARRAY);
+			Match (TT::BRACKET_OPEN);
+			Match (TT::NUM);
+			Match (TT::DOT_DOT);
+			Match (TT::NUM);
+			Match (TT::BRACKET_CLOSE);
+			Match (TT::OF);
 			StandardType ();
 			break;
-		case (TokenType::STANDARD_TYPE):
+		case (TT::STANDARD_TYPE):
 			StandardType ();
 
 			break;
+
+		default:
+			Synch ({ TT::PAREN_CLOSE, TT::SEMICOLON });
 	}
 }
 void PascalParser::StandardType ()
 {
-	Match (TokenType::STANDARD_TYPE);
-	// switch (pc.Current ().type)
-	// {
-	// 	case (TokenType::STANDARD_TYPE):
-	// 		Match (TokenType::INTEGER);
+	switch (pc.Current ().type)
+	{
+		case (TT::STANDARD_TYPE):
+			Match (TT::STANDARD_TYPE);
+			break;
 
-	// 		break;
-	// 	case (TokenType::REAL):
-	// 		Match (TokenType::REAL);
-	// 		break;
-	// }
+		default:
+			Synch ({ TT::PAREN_CLOSE, TT::SEMICOLON });
+	}
 }
 void PascalParser::SubprogramDeclaration ()
 {
-	SubprogramHead ();
-	SubprogramDeclarationFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::PROCEDURE):
+			SubprogramHead ();
+			SubprogramDeclarationFactored ();
+			break;
+
+		default:
+			Synch ({ TT::SEMICOLON });
+	}
 }
 void PascalParser::SubprogramHead ()
 {
-	Match (TokenType::PROCEDURE);
-	Match (TokenType::ID);
-	SubprogramHeadFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::PROCEDURE):
+			Match (TT::PROCEDURE);
+			Match (TT::ID);
+			SubprogramHeadFactored ();
+			break;
+
+		default:
+			Synch ({ TT::PROCEDURE, TT::VARIABLE, TT::BEGIN });
+	}
 }
 void PascalParser::Arguments ()
 {
-	Match (TokenType::PAREN_OPEN);
-	ParameterList ();
-	Match (TokenType::PAREN_CLOSE);
+	switch (pc.Current ().type)
+	{
+		case (TT::PAREN_OPEN):
+			Match (TT::PAREN_OPEN);
+			ParameterList ();
+			Match (TT::PAREN_CLOSE);
+			break;
+
+		default:
+			Synch ({ TT::SEMICOLON });
+	}
 }
 void PascalParser::ParameterList ()
 {
-	Match (TokenType::ID);
-	Match (TokenType::COLON);
-	Type ();
-	ParameterListPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::ID):
+			Match (TT::ID);
+			Match (TT::COLON);
+			Type ();
+			ParameterListPrime ();
+			break;
+
+		default:
+			Synch ({ TT::PAREN_CLOSE });
+	}
 }
-void PascalParser::OptionalStatements () { StatementList (); }
+void PascalParser::OptionalStatements ()
+{
+	switch (pc.Current ().type)
+	{
+		case (TT::VARIABLE):
+		case (TT::WHILE):
+		case (TT::BEGIN):
+		case (TT::IF):
+		case (TT::CALL):
+			StatementList ();
+			break;
+
+		default:
+			Synch ({ TT::END });
+	}
+}
 void PascalParser::StatementList ()
 {
-	Statement ();
-	StatementListPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::VARIABLE):
+		case (TT::WHILE):
+		case (TT::BEGIN):
+		case (TT::IF):
+		case (TT::CALL):
+			Statement ();
+			StatementListPrime ();
+			break;
+
+		default:
+			Synch ({ TT::END });
+	}
 }
 void PascalParser::Statement ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
-			Match (TokenType::VARIABLE);
-			Match (TokenType::ASSIGNOP);
+		case (TT::VARIABLE):
+			Match (TT::VARIABLE);
+			Match (TT::ASSIGNOP);
 			Expression ();
 			break;
-		case (TokenType::WHILE):
-			Match (TokenType::WHILE);
+		case (TT::WHILE):
+			Match (TT::WHILE);
 			Expression ();
-			Match (TokenType::DO);
+			Match (TT::DO);
 			Statement ();
 			break;
-		case (TokenType::BEGIN):
-			Match (TokenType::BEGIN);
-			StatementFactoredTwo ();
+		case (TT::BEGIN):
+			Match (TT::BEGIN);
+			StatementFactoredBegin ();
 			break;
-		case (TokenType::IF):
-			Match (TokenType::IF);
+		case (TT::IF):
+			Match (TT::IF);
 			Expression ();
-			Match (TokenType::THEN);
+			Match (TT::THEN);
 			Statement ();
-			StatementFactoredOne ();
+			StatementFactoredElse ();
 			break;
-		case (TokenType::CALL):
+		case (TT::CALL):
 			ProcedureStatement ();
 			break;
+
+		default:
+			Synch ({ TT::SEMICOLON, TT::ELSE });
 	}
 }
 void PascalParser::Variable ()
 {
-	Match (TokenType::ID);
-	VariableFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::ID):
+			Match (TT::ID);
+			VariableFactored ();
+			break;
+
+		default:
+			Synch ({ TT::ASSIGNOP });
+	}
 }
 void PascalParser::Expression ()
 {
-	SimpleExpression ();
-	ExpressionFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::ID):
+		case (TT::PAREN_OPEN):
+		case (TT::NUM):
+		case (TT::NOT):
+		case (TT::SIGN):
+			SimpleExpression ();
+			ExpressionFactored ();
+			break;
+
+		default:
+			Synch ({ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::THEN, TT::ELSE, TT::DO });
+	}
 }
 void PascalParser::ProcedureStatement ()
 {
-	Match (TokenType::CALL);
-	Match (TokenType::ID);
-	ProcedureStatmentFactored ();
+	switch (pc.Current ().type)
+	{
+		case (TT::CALL):
+			Match (TT::CALL);
+			Match (TT::ID);
+			ProcedureStatmentFactored ();
+			break;
+
+		default:
+			Synch ({ TT::SEMICOLON, TT::ELSE });
+	}
 }
 void PascalParser::ExpressionList ()
 {
-	Expression ();
-	ExpressionListPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::ID):
+		case (TT::PAREN_OPEN):
+		case (TT::NUM):
+		case (TT::NOT):
+		case (TT::SIGN):
+			Expression ();
+			ExpressionListPrime ();
+			break;
+
+		default:
+			Synch ({ TT::PAREN_CLOSE });
+	}
 }
 void PascalParser::SimpleExpression ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::ID):
-		case (TokenType::PAREN_OPEN):
-		case (TokenType::NUM):
-		case (TokenType::NOT):
+		case (TT::ID):
+		case (TT::PAREN_OPEN):
+		case (TT::NUM):
+		case (TT::NOT):
 			Term ();
 			SimpleExpressionPrime ();
 			break;
-		case (TokenType::SIGN):
-			Match (TokenType::SIGN);
+		case (TT::SIGN):
+			Match (TT::SIGN);
 			Term ();
 			SimpleExpressionPrime ();
 
 			break;
+
+		default:
+			Synch ({ TT::PAREN_CLOSE, TT::SEMICOLON, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO });
 	}
 }
 void PascalParser::Term ()
 {
-	Factor ();
-	TermPrime ();
+	switch (pc.Current ().type)
+	{
+		case (TT::ID):
+		case (TT::NUM):
+		case (TT::PAREN_OPEN):
+		case (TT::NOT):
+			Factor ();
+			TermPrime ();
+			break;
+
+		default:
+			Synch ({ TT::ADDOP });
+	}
 }
-void PascalParser::Sign () { Match (TokenType::SIGN); }
+void PascalParser::Sign ()
+{
+	switch (pc.Current ().type)
+	{
+		case (TT::SIGN):
+			Match (TT::SIGN);
+			break;
+
+		default:
+			Synch ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT });
+	}
+}
 void PascalParser::Factor ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::ID):
-			Match (TokenType::ID);
+		case (TT::ID):
+			Match (TT::ID);
 			break;
-		case (TokenType::NUM):
-			Match (TokenType::NUM);
+		case (TT::NUM):
+			Match (TT::NUM);
 			break;
-		case (TokenType::PAREN_OPEN):
-			Match (TokenType::PAREN_OPEN);
+		case (TT::PAREN_OPEN):
+			Match (TT::PAREN_OPEN);
 			Expression ();
-			Match (TokenType::PAREN_CLOSE);
+			Match (TT::PAREN_CLOSE);
 			break;
-		case (TokenType::NOT):
-			Match (TokenType::NOT);
+		case (TT::NOT):
+			Match (TT::NOT);
 			Factor ();
 			break;
+
+		default:
+			Synch ({ TT::MULOP });
 	}
 }
 void PascalParser::IdentifierListPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::COMMA):
-			Match (TokenType::COMMA);
-			Match (TokenType::ID);
+		case (TT::COMMA):
+			Match (TT::COMMA);
+			Match (TT::ID);
 			IdentifierListPrime ();
 			break;
+		case (TT::PAREN_CLOSE):
+			break;
+		default:
+			Synch ({ TT::PAREN_CLOSE });
 	}
 	// e-prod
 }
@@ -272,14 +468,19 @@ void PascalParser::DeclarationsPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
-			Match (TokenType::VARIABLE);
-			Match (TokenType::ID);
-			Match (TokenType::COLON);
+		case (TT::VARIABLE):
+			Match (TT::VARIABLE);
+			Match (TT::ID);
+			Match (TT::COLON);
 			Type ();
-			Match (TokenType::SEMICOLON);
+			Match (TT::SEMICOLON);
 			DeclarationsPrime ();
 			break;
+		case (TT::PROCEDURE):
+		case (TT::BEGIN):
+			break;
+		default:
+			Synch ({ TT::PROCEDURE, TT::BEGIN });
 	}
 	// e-prod
 }
@@ -287,11 +488,15 @@ void PascalParser::SubprogramDeclarationsPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::PROCEDURE):
+		case (TT::PROCEDURE):
 			SubprogramDeclaration ();
-			Match (TokenType::SEMICOLON);
+			Match (TT::SEMICOLON);
 			SubprogramDeclarationsPrime ();
 			break;
+		case (TT::BEGIN):
+			break;
+		default:
+			Synch ({ TT::BEGIN });
 	}
 	// e-prod
 }
@@ -299,13 +504,17 @@ void PascalParser::ParameterListPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::SEMICOLON):
-			Match (TokenType::SEMICOLON);
-			Match (TokenType::ID);
-			Match (TokenType::COLON);
+		case (TT::SEMICOLON):
+			Match (TT::SEMICOLON);
+			Match (TT::ID);
+			Match (TT::COLON);
 			Type ();
 			ParameterListPrime ();
 			break;
+		case (TT::PAREN_CLOSE):
+			break;
+		default:
+			Synch ({ TT::PAREN_CLOSE });
 	}
 	// e-prod
 }
@@ -313,137 +522,184 @@ void PascalParser::StatementListPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::SEMICOLON):
-			Match (TokenType::SEMICOLON);
+		case (TT::SEMICOLON):
+			Match (TT::SEMICOLON);
 			Statement ();
 			StatementListPrime ();
 			break;
+		case (TT::END):
+			break;
+		default:
+			Synch ({ TT::END });
 	}
+	// e -prod
 }
 void PascalParser::ExpressionListPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::COMMA):
-			Match (TokenType::COMMA);
+		case (TT::COMMA):
+			Match (TT::COMMA);
 			Expression ();
 			ExpressionListPrime ();
 			break;
+
+		case (TT::PAREN_CLOSE):
+			break;
+		default:
+			Synch ({ TT::PAREN_CLOSE });
 	}
+	// e -prod
 }
 void PascalParser::SimpleExpressionPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::ADDOP):
-			Match (TokenType::ADDOP);
+		case (TT::ADDOP):
+			Match (TT::ADDOP);
 			Term ();
 			SimpleExpressionPrime ();
 			break;
+		case (TT::PAREN_CLOSE):
+		case (TT::SEMICOLON):
+		case (TT::BRACKET_CLOSE):
+		case (TT::COMMA):
+		case (TT::RELOP):
+		case (TT::THEN):
+		case (TT::ELSE):
+		case (TT::DO):
+			break;
+		default:
+			Synch (
+			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO });
 	}
+	// e -prod
 }
 void PascalParser::TermPrime ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::MULOP):
-			Match (TokenType::MULOP);
+		case (TT::MULOP):
+			Match (TT::MULOP);
 			Factor ();
 			TermPrime ();
 			break;
+		case (TT::ADDOP):
+			break;
+		default:
+			Synch({ TT::ADDOP });
 	}
+	// e -prod
 }
 void PascalParser::ProgramStatementFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
+		case (TT::VARIABLE):
 			Declarations ();
 			ProgramStatementFactoredFactored ();
 			break;
-		case (TokenType::PROCEDURE):
+		case (TT::PROCEDURE):
 			SubprogramDeclarations ();
 			CompoundStatement ();
-			Match (TokenType::DOT);
+			Match (TT::DOT);
 			break;
-		case (TokenType::BEGIN):
+		case (TT::BEGIN):
 			CompoundStatement ();
-			Match (TokenType::DOT);
+			Match (TT::DOT);
 			break;
+
+		default:
+			Synch ({ TT::END_FILE });
 	}
 }
 void PascalParser::CompoundStatementFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::END):
-			Match (TokenType::END);
+		case (TT::END):
+			Match (TT::END);
 			break;
-		case (TokenType::BEGIN):
-		case (TokenType::ID):
-		case (TokenType::CALL):
-		case (TokenType::IF):
-		case (TokenType::WHILE):
+		case (TT::BEGIN):
+		case (TT::ID):
+		case (TT::CALL):
+		case (TT::IF):
+		case (TT::WHILE):
 			OptionalStatements ();
-			Match (TokenType::END);
+			Match (TT::END);
 			break;
+
+		default:
+			Synch ({ TT::SEMICOLON, TT::DOT });
 	}
 }
 void PascalParser::SubprogramDeclarationFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
+		case (TT::VARIABLE):
 			Declarations ();
 			ProgramStatementFactoredFactored ();
 			break;
-		case (TokenType::PROCEDURE):
+		case (TT::PROCEDURE):
 			SubprogramDeclarations ();
 			CompoundStatement ();
-			Match (TokenType::DOT);
 			break;
-		case (TokenType::BEGIN):
+		case (TT::BEGIN):
 			CompoundStatement ();
-			Match (TokenType::DOT);
 			break;
+
+		default:
+			Synch ({ TT::SEMICOLON });
 	}
 }
 void PascalParser::SubprogramHeadFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::PAREN_OPEN):
+		case (TT::PAREN_OPEN):
 			Arguments ();
+			Match (TT::SEMICOLON);
 			break;
-		case (TokenType::SEMICOLON):
-			Match (TokenType::SEMICOLON);
+		case (TT::SEMICOLON):
+			Match (TT::SEMICOLON);
 			break;
+
+		default:
+			Synch ({ TT::VARIABLE, TT::BEGIN });
 	}
 }
-void PascalParser::StatementFactoredOne ()
+void PascalParser::StatementFactoredBegin ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::END):
-			Match (TokenType::END);
+		case (TT::END):
+			Match (TT::END);
 			break;
-		case (TokenType::BEGIN):
-		case (TokenType::ID):
-		case (TokenType::CALL):
-		case (TokenType::IF):
-		case (TokenType::WHILE):
+		case (TT::BEGIN):
+		case (TT::ID):
+		case (TT::CALL):
+		case (TT::IF):
+		case (TT::WHILE):
 			OptionalStatements ();
-			Match (TokenType::END);
+			Match (TT::END);
+			break;
+		default:
+			Synch ({ TT::SEMICOLON, TT::ELSE });
 	}
 }
-void PascalParser::StatementFactoredTwo ()
+void PascalParser::StatementFactoredElse ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::ELSE):
-			Match (TokenType::ELSE);
+		case (TT::ELSE):
+			Match (TT::ELSE);
 			Statement ();
 			break;
+		case (TT::SEMICOLON):
+			break;
+		default:
+			Synch({ TT::SEMICOLON});
 	}
 	// e-prod
 }
@@ -451,11 +707,15 @@ void PascalParser::VariableFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::BRACKET_OPEN):
-			Match (TokenType::BRACKET_OPEN);
+		case (TT::BRACKET_OPEN):
+			Match (TT::BRACKET_OPEN);
 			Expression ();
-			Match (TokenType::BRACKET_CLOSE);
+			Match (TT::BRACKET_CLOSE);
 			break;
+		case (TT::ASSIGNOP):
+			break;
+		default:
+			Synch({ TT::ASSIGNOP});
 	}
 	// e-prod
 }
@@ -463,10 +723,21 @@ void PascalParser::ExpressionFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::RELOP):
-			Match (TokenType::RELOP);
+		case (TT::RELOP):
+			Match (TT::RELOP);
 			SimpleExpression ();
 			break;
+		case (TT::PAREN_CLOSE):
+		case (TT::SEMICOLON):
+		case (TT::BRACKET_CLOSE):
+		case (TT::COMMA):
+		case (TT::THEN):
+		case (TT::ELSE):
+		case (TT::DO):
+			break;
+		default:
+		Synch({ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::THEN, TT::ELSE, TT::DO });
+
 	}
 
 	// e-prod
@@ -475,11 +746,16 @@ void PascalParser::ProcedureStatmentFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::PAREN_OPEN):
-			Match (TokenType::PAREN_OPEN);
+		case (TT::PAREN_OPEN):
+			Match (TT::PAREN_OPEN);
 			ExpressionList ();
-			Match (TokenType::PAREN_CLOSE);
+			Match (TT::PAREN_CLOSE);
 			break;
+		case (TT::SEMICOLON):
+		case (TT::ELSE):
+			break;
+		default:
+			Synch({ TT::ELSE, TT::SEMICOLON });
 	}
 	// e-prod
 }
@@ -487,27 +763,33 @@ void PascalParser::ProgramStatementFactoredFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::PROCEDURE):
+		case (TT::PROCEDURE):
 			SubprogramDeclarations ();
 			CompoundStatement ();
-			Match (TokenType::DOT);
+			Match (TT::DOT);
 			break;
-		case (TokenType::BEGIN):
+		case (TT::BEGIN):
 			CompoundStatement ();
-			Match (TokenType::DOT);
+			Match (TT::DOT);
 			break;
+
+		default:
+			Synch ({ TT::END_FILE });
 	}
 }
 void PascalParser::SubprogramStatementFactoredFactored ()
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::PROCEDURE):
+		case (TT::PROCEDURE):
 			SubprogramDeclarations ();
 			CompoundStatement ();
 			break;
-		case (TokenType::BEGIN):
+		case (TT::BEGIN):
 			CompoundStatement ();
 			break;
+
+		default:
+			Synch ({ TT::SEMICOLON });
 	}
 }

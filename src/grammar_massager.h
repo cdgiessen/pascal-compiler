@@ -96,7 +96,10 @@ class FirstsAndFollows
 	void FindFirsts ();
 	void FindFollows ();
 
+	std::set<int> GetFirstsOfRule(Rule& rule, int epsilon_index);
+
 	void Print (std::string outFileName);
+	void PrintWithGrammar(std::string outFileName);
 
 	std::map<int, std::set<int>> firsts;
 	std::map<int, std::set<int>> follows;
@@ -115,6 +118,7 @@ struct ParseTable
 
 	FirstsAndFollows firstAndFollows;
 	std::map<int, int> var_key_to_index;
+	std::map<int, int> term_key_to_index;
 
 	// row-var, col-terminal, inner is for possible multiple entries
 	std::vector<std::vector<std::set<int>>> table;
