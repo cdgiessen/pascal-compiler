@@ -841,7 +841,7 @@ void FirstsAndFollows::FindFollows ()
 		}
 
 		// 3. If there is a production  A->aBB' where
-		//	FIRST(B') contains e (i.e., B =*> e) then everything in FOLLOW(A) is in FOLLOW(B).
+		//	FIRST(B') contains e (i.e., B' =*> e) then everything in FOLLOW(A) is in FOLLOW(B).
 		for (auto &prod : grammar.productions)
 		{
 			if (prod.rule.size () > 1)
