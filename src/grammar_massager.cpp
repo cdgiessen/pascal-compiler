@@ -164,14 +164,50 @@ void Grammar::PrintGrammar (std::string out_file_name)
 
 
 	fmt::print (ofh.FP (), "TOKENS ");
+	int index = 0;
 	for (auto &[key, term] : terminals)
 	{
-		fmt::print (ofh.FP (), "{} ", term);
+		fmt::print (ofh.FP (), "'{}' ", term);
+		if (index != terminals.size () - 1) fmt::print (ofh.FP (), ", ");
 	}
 	fmt::print (ofh.FP (), "\n");
 
-	int var_index = 0;
+	std::map<int, std::pair<int, std::string>> ordered_vars;
+	std::vector<std::pair<int, std::string>> vars_found;
 	for (auto &[var, var_string] : variables)
+	{
+		bool contains_apostrophe = false;
+		int loc = var_string.find ("'");
+		if (loc == std::string::npos)
+		{
+			vars_found.push_back (std::pair<int, std::string> (var, var_string));
+			ordered_vars[var * 1000] = std::pair<int, std::string> (var, var_string);
+		}
+		else
+		{
+			int apos_count = var_string.size () - loc;
+			// fmt::print ("{}\n", apos_count);
+			for (auto &[index, i_str] : vars_found)
+			{
+				if (i_str == var_string.substr (0, loc))
+				{
+					fmt::print ("{}  {}\n", var_string.substr (0, loc), index * 1000 + apos_count * 1);
+					ordered_vars[index * 1000 + apos_count * 1] = std::pair<int, std::string> (var, var_string);
+				}
+			}
+		}
+	}
+
+	std::vector<std::pair<int, std::string>> o_O_pairs;
+	for (auto &[i, p] : ordered_vars)
+	{
+		o_O_pairs.push_back (p);
+	}
+
+
+	int var_index = 0;
+
+	for (auto &[var, var_string] : o_O_pairs)
 	{
 		if (var_string == "e") continue; // special case
 
@@ -185,7 +221,7 @@ void Grammar::PrintGrammar (std::string out_file_name)
 				for (auto &token : productions.at (i).rule)
 				{
 					if (token.isTerm)
-						fmt::print (ofh.FP (), "{} ", terminals.at (token.index));
+						fmt::print (ofh.FP (), "'{}' ", terminals.at (token.index));
 					else
 						fmt::print (ofh.FP (), "{} ", variables.at (token.index));
 				}
@@ -473,7 +509,7 @@ Grammar RemoveLeftRecursion (Grammar &eLess_Grammar)
 
 			// create a new variable
 
-			int new_index = res_grammar.DeriveNewVariable (index, "_p");
+			int new_index = res_grammar.DeriveNewVariable (index, "'");
 
 			// find the 'e' variable and add a new production for var_prime with e as its rule
 			int e_index = res_grammar.find_epsilon_index ();
@@ -533,7 +569,7 @@ Grammar RemoveXLeftFactoring (Grammar &in_grammar)
 
 				has_changed = true;
 				// make new variable
-				int new_index = res_grammar.CreateNewVariable (prods.at (0).var, "_f");
+				int new_index = res_grammar.CreateNewVariable (prods.at (0).var, "'");
 
 
 				// remove original production
