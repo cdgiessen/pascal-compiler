@@ -63,6 +63,7 @@ class Grammar
 	int index = 0;
 
 	void PrintGrammar (std::string out_file_name);
+	void PrintGrammar(std::string out_file_name, std::function<void(FILE* fp, int var)> variable_decorator);
 
 	int DeriveNewVariable (Variable var, std::string str);
 	int CreateNewVariable (Variable var, std::string str);
@@ -83,6 +84,8 @@ class Grammar
 	void RemoveDuplicateProductions ();
 
 	std::vector<Production> ProductionsOfVariable (Variable var) const;
+
+	std::map<int, std::string> ProperIndexes();
 };
 
 class FirstsAndFollows
@@ -94,6 +97,9 @@ class FirstsAndFollows
 	void FindFollows ();
 
 	std::set<int> GetFirstsOfRule(Rule& rule, int epsilon_index);
+
+	void PrintFirst(FILE *fp, int key);
+	void PrintFollow(FILE *fp, int key);
 
 	void Print (std::string outFileName);
 	void PrintWithGrammar(std::string outFileName);

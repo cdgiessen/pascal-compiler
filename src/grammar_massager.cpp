@@ -156,22 +156,8 @@ std::vector<Production> Grammar::ProductionsOfVariable (Variable var) const
 	return prods;
 }
 
-
-void Grammar::PrintGrammar (std::string out_file_name)
+std::vector<std::pair<int, std::string>> CalcOutputOrder (std::map<int, std::string> variables)
 {
-
-	OutputFileHandle ofh (out_file_name);
-
-
-	fmt::print (ofh.FP (), "TOKENS ");
-	int index = 0;
-	for (auto &[key, term] : terminals)
-	{
-		fmt::print (ofh.FP (), "'{}' ", term);
-		if (index != terminals.size () - 1) fmt::print (ofh.FP (), ", ");
-	}
-	fmt::print (ofh.FP (), "\n");
-
 	std::map<int, std::pair<int, std::string>> ordered_vars;
 	std::vector<std::pair<int, std::string>> vars_found;
 	for (auto &[var, var_string] : variables)
@@ -198,26 +184,68 @@ void Grammar::PrintGrammar (std::string out_file_name)
 		}
 	}
 
-	std::vector<std::pair<int, std::string>> o_O_pairs;
+	std::vector<std::pair<int, std::string>> out_pairs;
 	for (auto &[i, p] : ordered_vars)
 	{
-		o_O_pairs.push_back (p);
+		out_pairs.push_back (p);
 	}
+	return out_pairs;
+}
+
+void Grammar::PrintGrammar (std::string out_file_name)
+{
+	PrintGrammar (out_file_name, [](FILE *fp, int var) {});
+}
+void Grammar::PrintGrammar (std::string out_file_name, std::function<void(FILE *fp, int var)> variable_decorator)
+{
+
+	OutputFileHandle ofh (out_file_name);
 
 
-	int var_index = 0;
+	fmt::print (ofh.FP (), "TOKENS ");
+	int index = 0;
+	for (auto &[key, term] : terminals)
+	{
+		fmt::print (ofh.FP (), "'{}' ", term);
+		if (index != terminals.size () - 1) fmt::print (ofh.FP (), ", ");
+	}
+	fmt::print (ofh.FP (), "\n");
 
-	for (auto &[var, var_string] : o_O_pairs)
+	auto ordered_pairs = CalcOutputOrder (variables);
+
+	int var_index = 1;
+	std::string prev = "";
+	int prod_index = 1;
+	for (auto &[var, var_string] : ordered_pairs)
 	{
 		if (var_string == "e") continue; // special case
 
-		fmt::print (ofh.FP (), "({}) {} ->\n\t", std::to_string (var_index), var_string);
+		bool isSame = false;
 
+		int loc = var_string.find ("'");
+		if (loc != std::string::npos && prev == var_string.substr (0, loc)) { isSame = true; }
+		else
+		{
+			prev = var_string;
+			prod_index = 1;
+		}
+
+		// fmt::print (ofh.FP (), "({}) {} ->\t", std::to_string (isSame ? var_index - 1 :
+		// var_index), var_string); variable_decorator (ofh.FP (), var);
+
+		// fmt::print (ofh.FP (), "\n");
 		for (int i = 0; i < productions.size (); i++)
 		{
 			if (productions.at (i).var == var)
 			{
-				fmt::print (ofh.FP (), "({})\t", std::to_string (var_index) + "." + std::to_string (i));
+				// fmt::print(ofh.FP(), "({}) {} ->", std::to_string(isSame ? var_index - 1 : var_index), var_string);
+				// fmt::print (ofh.FP (), "\t({})\t", std::to_string (isSame ? var_index - 1 : var_index) + "." + std::to_string (prod_index++));
+
+				fmt::print (ofh.FP (),
+				"({}) {} -> ",
+				std::to_string (isSame ? var_index - 1 : var_index) + "." + std::to_string (prod_index),
+				var_string);
+				prod_index++;
 				for (auto &token : productions.at (i).rule)
 				{
 					if (token.isTerm)
@@ -225,12 +253,54 @@ void Grammar::PrintGrammar (std::string out_file_name)
 					else
 						fmt::print (ofh.FP (), "{} ", variables.at (token.index));
 				}
-				fmt::print (ofh.FP (), "\n\t");
+				fmt::print (ofh.FP (), "\n");
 			}
 		}
-		var_index++;
-		fmt::print (ofh.FP (), "\n");
+		if (!isSame) var_index++;
+		// fmt::print (ofh.FP (), "\n");
 	}
+}
+
+std::map<int, std::string> Grammar::ProperIndexes ()
+{
+	std::map<int, std::string> out;
+
+	auto ordered_pairs = CalcOutputOrder (variables);
+
+	int var_index = 1;
+	std::string prev = "";
+	int prod_index = 1;
+	for (auto &[var, var_string] : ordered_pairs)
+	{
+			bool isSame = false;
+		if (var_string != "e")
+		{ // special case
+
+
+			int loc = var_string.find ("'");
+			if (prev == var_string) {}
+			else if (loc != std::string::npos && prev == var_string.substr (0, loc))
+			{
+				isSame = true;
+			}
+			else
+			{
+				prev = var_string;
+				prod_index = 1;
+			}
+			for (int i = 0; i < productions.size (); i++)
+			{
+				if (productions.at (i).var == var)
+				{
+					out[i] = std::to_string (isSame ? var_index - 1 : var_index) + "."
+					         + std::to_string (prod_index);
+					prod_index++;
+				}
+			}
+			if (!isSame) var_index++;
+		} else { }
+	}
+	return out;
 }
 
 void Grammar::RemoveDuplicateProductions ()
@@ -952,124 +1022,92 @@ std::set<int> FirstsAndFollows::GetFirstsOfRule (Rule &rule, int epsilon_index)
 	return ret;
 }
 
+void FirstsAndFollows::PrintFirst (FILE *fp, int key)
+{
+	std::set<int> set = firsts.at (key);
+	if (grammar.variables.count (key) == 1)
+	{
+		fmt::print (fp, "{}", "{");
+		int index = 0;
+		for (auto &val : set)
+		{
+			if (grammar.variables.count (val) == 1)
+			{ fmt::print (fp, "{}", grammar.variables.at (val)); }
+			else if (grammar.terminals.count (val) == 1)
+			{
+				fmt::print (fp, "'{}'", grammar.terminals.at (val));
+			}
+			if (index++ != set.size () - 1) fmt::print (fp, ", ");
+		}
+		fmt::print (fp, "{}", "}");
+	}
+}
+void FirstsAndFollows::PrintFollow (FILE *fp, int key)
+{
+	std::set<int> set = follows.at (key);
+
+	if (key != grammar.find_epsilon_index ())
+	{
+		fmt::print (fp, "{}", "{");
+		int index = 0;
+		for (auto &val : set)
+		{
+			if (grammar.variables.count (val) == 1)
+			{ fmt::print (fp, "{}", grammar.variables.at (val)); }
+			else if (grammar.terminals.count (val) == 1)
+			{
+				fmt::print (fp, "'{}'", grammar.terminals.at (val));
+			}
+			if (index++ != set.size () - 1) fmt::print (fp, ", ");
+		}
+		fmt::print (fp, "{}", "}");
+	}
+}
 
 void FirstsAndFollows::Print (std::string outFileName)
 {
 	OutputFileHandle ofh (outFileName);
+	auto ordered_pairs = CalcOutputOrder (grammar.variables);
 
 	fmt::print (ofh.FP (), "---Firsts---\n");
-	for (auto [key, set] : firsts)
+	for (auto &[key, val] : ordered_pairs)
 	{
-		if (grammar.variables.count (key) == 1)
+		if (grammar.variables.count (key) == 1 && grammar.variables.at (key) != "e")
 		{
-			fmt::print (ofh.FP (), "{} {}", grammar.variables.at (key), "{");
-			int index = 0;
-			for (auto &val : set)
-			{
-				if (grammar.variables.count (val) == 1)
-				{ fmt::print (ofh.FP (), "{}", grammar.variables.at (val)); }
-				else if (grammar.terminals.count (val) == 1)
-				{
-					fmt::print (ofh.FP (), "'{}'", grammar.terminals.at (val));
-				}
-				if (index++ != set.size () - 1) fmt::print (ofh.FP (), ", ");
-			}
-			fmt::print (ofh.FP (), "{}\n", "}");
+			fmt::print (ofh.FP (), "{}: ", grammar.variables.at (key));
+			PrintFirst (ofh.FP (), key);
+			fmt::print (ofh.FP (), "\n");
 		}
 	}
-	fmt::print (ofh.FP (), "\n");
-
-
+	int epsilon_index = grammar.find_epsilon_index ();
 	fmt::print (ofh.FP (), "\n---Follows---\n");
-	for (auto [key, set] : follows)
+	for (auto &[key, val] : ordered_pairs)
 	{
-		if (key != grammar.find_epsilon_index ())
+		if (key != epsilon_index)
 		{
-			fmt::print (ofh.FP (), "{} {}", grammar.variables.at (key), "{");
-			int index = 0;
-			for (auto &val : set)
-			{
-				if (grammar.variables.count (val) == 1)
-				{ fmt::print (ofh.FP (), "{}", grammar.variables.at (val)); }
-				else if (grammar.terminals.count (val) == 1)
-				{
-					fmt::print (ofh.FP (), "'{}'", grammar.terminals.at (val));
-				}
-				if (index++ != set.size () - 1) fmt::print (ofh.FP (), ", ");
-			}
-			fmt::print (ofh.FP (), "{}\n", "}");
+			fmt::print (ofh.FP (), "{}: ", grammar.variables.at (key));
+			PrintFollow (ofh.FP (), key);
+			fmt::print (ofh.FP (), "\n");
 		}
 	}
+
 	fmt::print (ofh.FP (), "\n");
 }
 
 void FirstsAndFollows::PrintWithGrammar (std::string outFileName)
 {
-	OutputFileHandle ofh (outFileName);
-
-	fmt::print (ofh.FP (), "TOKENS ");
-	for (auto &[key, term] : grammar.terminals)
-	{
-		fmt::print (ofh.FP (), "{} ", term);
-	}
-	fmt::print (ofh.FP (), "\n");
-
-	int var_index = 0;
-	for (auto &[var, var_string] : grammar.variables)
-	{
-		if (var_string == "e") continue; // special case
-		// variable
-		fmt::print (ofh.FP (), "({}) {} ->\t", std::to_string (var_index), var_string);
-
+	grammar.PrintGrammar (outFileName, [=](FILE *fp, int var) {
 		// firsts
-		fmt::print (ofh.FP (), "{}", "{Firsts: ");
-		int index = 0;
-		for (auto &val : firsts.at (var))
-		{
-			if (grammar.variables.count (val) == 1)
-			{ fmt::print (ofh.FP (), "{}", grammar.variables.at (val)); }
-			else if (grammar.terminals.count (val) == 1)
-			{
-				fmt::print (ofh.FP (), "'{}'", grammar.terminals.at (val));
-			}
-			if (index++ != firsts.at (var).size () - 1) fmt::print (ofh.FP (), ", ");
-		}
-		fmt::print (ofh.FP (), "{}\t", "}");
+		fmt::print (fp, "{}", "{Firsts: ");
+		PrintFirst (fp, var);
+		fmt::print (fp, ";\t");
 
 		// follows
-		fmt::print (ofh.FP (), "{}Follows: ", "{");
-		index = 0;
-		for (auto &val : follows.at (var))
-		{
-			if (grammar.variables.count (val) == 1)
-			{ fmt::print (ofh.FP (), "{}", grammar.variables.at (val)); }
-			else if (grammar.terminals.count (val) == 1)
-			{
-				fmt::print (ofh.FP (), "'{}'", grammar.terminals.at (val));
-			}
-			if (index++ != follows.at (var).size () - 1) fmt::print (ofh.FP (), ", ");
-		}
-		fmt::print (ofh.FP (), "{}\n", "}");
-
-		// productions
-		for (int i = 0; i < grammar.productions.size (); i++)
-		{
-			if (grammar.productions.at (i).var == var)
-			{
-				fmt::print (ofh.FP (), "\t({})\t", std::to_string (var_index) + "." + std::to_string (i));
-				for (auto &token : grammar.productions.at (i).rule)
-				{
-					if (token.isTerm)
-						fmt::print (ofh.FP (), "{} ", grammar.terminals.at (token.index));
-					else
-						fmt::print (ofh.FP (), "{} ", grammar.variables.at (token.index));
-				}
-				fmt::print (ofh.FP (), "\n");
-			}
-		}
-		var_index++;
-		fmt::print (ofh.FP (), "\n");
-	}
+		fmt::print (fp, "{}Follows: ", "{");
+		PrintFollow (fp, var);
+		fmt::print (fp, "{}", "}");
+	});
+	return;
 }
 
 
@@ -1091,7 +1129,9 @@ ParseTable::ParseTable (Grammar &grammar) : grammar (grammar), firstAndFollows (
 
 	// map var keys to 0 based index. not sure if necessary if I just make everything maps...
 	int index = 0;
-	for (auto &[key, value] : grammar.variables)
+	auto ordered_pairs = CalcOutputOrder (grammar.variables);
+
+	for (auto &[key, value] : ordered_pairs)
 		var_key_to_index[key] = index++;
 	index = 0;
 
@@ -1216,25 +1256,39 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 	}
 	fmt::print (ofh.FP (), "\n");
 
+	std::map<int, std::string> indices = grammar.ProperIndexes ();
 
+	auto ordered_pairs = CalcOutputOrder (grammar.variables);
 	int i = 0;
-	for (auto [key, value] : grammar.variables)
+	
+	for (auto [key, value] : ordered_pairs)
 	{
-		if (value == "e") continue; // special case
-		fmt::print (ofh.FP (), "{}, ", value);
-
-		for (auto &terms : table.at (i))
+		bool after_e = false;
+		if (value != "e")
 		{
-			int count_index = 0;
-			for (auto &index : terms)
-			{
-				fmt::print (ofh.FP (), "{}", index);
-				if (count_index++ != terms.size () - 1) fmt::print (ofh.FP (), " | ");
-			}
-			fmt::print (ofh.FP (), ", ");
-		}
-		fmt::print (ofh.FP (), "\n");
+			fmt::print (ofh.FP (), "{}, ", value);
 
+			for (auto &terms : table.at (i))
+			{
+				int count_index = 0;
+				for (auto &index : terms)
+				{
+					if (after_e) {
+						fmt::print(ofh.FP(), "{}", std::stof(indices.at(index)) - 1.0);
+					}
+					else {
+
+					fmt::print (ofh.FP (), "{}", indices.at (index));
+					}
+					if (count_index++ != terms.size () - 1) fmt::print (ofh.FP (), " | ");
+				}
+				fmt::print (ofh.FP (), ", ");
+			}
+			fmt::print (ofh.FP (), "\n");
+		}
+		else {
+			after_e = true;
+		}
 		i++;
 	}
 }
@@ -1253,9 +1307,9 @@ void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
 	}
 	fmt::print (ofh.FP (), "\n");
 
-
+	auto ordered_pairs = CalcOutputOrder (grammar.variables);
 	int i = 0;
-	for (auto [key, value] : grammar.variables)
+	for (auto [key, value] : ordered_pairs)
 	{
 		if (value != "e")
 		{ // don't print a row for the epsilon symbol
