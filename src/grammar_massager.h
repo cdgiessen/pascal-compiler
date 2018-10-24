@@ -62,6 +62,8 @@ class Grammar
 	int start_symbol = 0; // should generally be the first production...
 	int index = 0;
 
+	void PrintTokenList(FILE *fp);
+
 	void PrintGrammar (std::string out_file_name);
 	void PrintGrammar(std::string out_file_name, std::function<void(FILE* fp, int var)> variable_decorator);
 

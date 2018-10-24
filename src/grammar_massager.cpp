@@ -192,6 +192,17 @@ std::vector<std::pair<int, std::string>> CalcOutputOrder (std::map<int, std::str
 	return out_pairs;
 }
 
+void Grammar::PrintTokenList(FILE *fp) {
+	fmt::print(fp, "TOKENS, ");
+	for (auto[key, value] : terminals)
+	{
+		if (value == ",")
+			fmt::print(fp, "\'comma\', ");
+		else
+			fmt::print(fp, "\'{}\', ", value);
+	}
+}
+
 void Grammar::PrintGrammar (std::string out_file_name)
 {
 	PrintGrammar (out_file_name, [](FILE *fp, int var) {});
@@ -202,13 +213,7 @@ void Grammar::PrintGrammar (std::string out_file_name, std::function<void(FILE *
 	OutputFileHandle ofh (out_file_name);
 
 
-	fmt::print (ofh.FP (), "TOKENS ");
-	int index = 0;
-	for (auto &[key, term] : terminals)
-	{
-		fmt::print (ofh.FP (), "'{}' ", term);
-		if (index != terminals.size () - 1) fmt::print (ofh.FP (), ", ");
-	}
+	PrintTokenList(ofh.FP());
 	fmt::print (ofh.FP (), "\n");
 
 	auto ordered_pairs = CalcOutputOrder (variables);
@@ -1249,11 +1254,7 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 {
 	OutputFileHandle ofh (out_file_name);
 
-	fmt::print (ofh.FP (), "TOKENS, ");
-	for (auto [key, value] : grammar.terminals)
-	{
-		fmt::print (ofh.FP (), "\'{}\', ", value);
-	}
+	grammar.PrintTokenList(ofh.FP());
 	fmt::print (ofh.FP (), "\n");
 
 	std::map<int, std::string> indices = grammar.ProperIndexes ();
@@ -1266,7 +1267,7 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 		bool after_e = false;
 		if (value != "e")
 		{
-			fmt::print (ofh.FP (), "{}, ", value);
+			fmt::print (ofh.FP (), "{},", value);
 
 			for (auto &terms : table.at (i))
 			{
@@ -1282,7 +1283,7 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 					}
 					if (count_index++ != terms.size () - 1) fmt::print (ofh.FP (), " | ");
 				}
-				fmt::print (ofh.FP (), ", ");
+				fmt::print (ofh.FP (), ",");
 			}
 			fmt::print (ofh.FP (), "\n");
 		}
@@ -1297,14 +1298,7 @@ void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
 {
 	OutputFileHandle ofh (out_file_name);
 
-	fmt::print (ofh.FP (), "TOKENS, ");
-	for (auto [key, value] : grammar.terminals)
-	{
-		if (value == ",")
-			fmt::print (ofh.FP (), "\'comma\', ");
-		else
-			fmt::print (ofh.FP (), "\'{}\', ", value);
-	}
+	grammar.PrintTokenList(ofh.FP());
 	fmt::print (ofh.FP (), "\n");
 
 	auto ordered_pairs = CalcOutputOrder (grammar.variables);
