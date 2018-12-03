@@ -208,8 +208,9 @@ TokenInfo ParserContext::Match (TT tt)
 		return Advance ();
 
 	else if (tt == Current ().type && tt == TT::END_FILE)
-
-		throw "End of Parse";
+	{
+	}
+	// throw "End of Parse";
 
 	else //  (tt != Current ().type)
 	{
@@ -244,11 +245,12 @@ void PascalParser::Parse (ParserContext &pc)
 {
 	try
 	{
-		ProgramStatement (pc);
+		auto v = ProgramStatement (pc);
 		pc.Match (TT::END_FILE);
 	}
 	catch (std::exception &err)
 	{
+		fmt::print (std::string (err.what ()) + "\n");
 		// found end file token, don't continue parsing
 	}
 }
@@ -263,10 +265,10 @@ RetType PascalParser::ProgramStatement (ParserContext &pc)
 			[&] {
 				pc.Match (TT::PROGRAM);
 
-				auto tid = pc.Match (TT::ID);
-				ProcedureID cur = pc.tree.SetStartProcedure (GetSymbol (tid));
-				if (cur == -1) pc.LogErrorProcInUse (tid);
+				ProcedureID cur = pc.tree.SetStartProcedure (GetSymbol (pc.Current ()));
+				if (cur == -1) pc.LogErrorProcInUse (pc.Current ());
 				pc.tree.Push (cur);
+				pc.Match (TT::ID);
 
 				pc.Match (TT::PAREN_OPEN);
 
@@ -338,9 +340,9 @@ RetType PascalParser::IdentifierList (ParserContext &pc)
 	{
 		case (TT::ID):
 			[&] {
-				auto tid = pc.Match (TT::ID);
-				bool exists = pc.tree.AddVariable (GetSymbol (tid), RT_none, true);
-				if (exists) { pc.LogErrorIdInUse (tid); }
+				bool exists = pc.tree.AddVariable (GetSymbol (pc.Current ()), RT_none, true);
+				if (exists) { pc.LogErrorIdInUse (pc.Current ()); }
+				pc.Match (TT::ID);
 
 				IdentifierListPrime (pc);
 			}();
@@ -362,9 +364,9 @@ RetType PascalParser::IdentifierListPrime (ParserContext &pc)
 		case (TT::COMMA):
 			[&] {
 				pc.Match (TT::COMMA);
-				auto tid = pc.Match (TT::ID);
-				bool exists = pc.tree.AddVariable (GetSymbol (tid), RT_none, true);
-				if (exists) { pc.LogErrorIdInUse (tid); }
+				bool exists = pc.tree.AddVariable (GetSymbol (pc.Current ()), RT_none, true);
+				if (exists) { pc.LogErrorIdInUse (pc.Current ()); }
+				pc.Match (TT::ID);
 				IdentifierListPrime (pc);
 			}();
 			break;
@@ -386,9 +388,9 @@ RetType PascalParser::Declarations (ParserContext &pc)
 		case (TT::VARIABLE):
 			[&] {
 				pc.Match (TT::VARIABLE);
-				auto tid = pc.Match (TT::ID);
-				auto exists = pc.tree.CheckVariable (GetSymbol (tid));
-				if (exists.has_value ()) { pc.LogErrorIdNotFound (tid); }
+				auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
+				if (exists.has_value ()) { pc.LogErrorIdNotFound (pc.Current ()); }
+				pc.Match (TT::ID);
 
 				pc.Match (TT::COLON);
 				Type (pc);
@@ -413,7 +415,8 @@ RetType PascalParser::DeclarationsPrime (ParserContext &pc)
 		case (TT::VARIABLE):
 			[&] {
 				pc.Match (TT::VARIABLE);
-				auto tid = pc.Match (TT::ID);
+				auto tid = pc.Current ();
+				pc.Match (TT::ID);
 				Type (pc);
 				auto t = pc.Match (TT::SEMICOLON);
 				auto exists = pc.tree.CheckVariable (GetSymbol (tid));
@@ -616,9 +619,9 @@ RetType PascalParser::SubprogramHead (ParserContext &pc)
 		case (TT::PROCEDURE):
 			[&] {
 				pc.Match (TT::PROCEDURE);
-				auto tid = pc.Match (TT::ID);
-				ProcedureID cur = pc.tree.AddSubProcedure (GetSymbol (tid));
-				if (cur == -1) { pc.LogErrorProcInUse (tid); }
+				ProcedureID cur = pc.tree.AddSubProcedure (GetSymbol (pc.Current ()));
+				if (cur == -1) { pc.LogErrorProcInUse (pc.Current ()); }
+				pc.Match (TT::ID);
 				pc.tree.Push (cur);
 
 				SubprogramHeadFactored (pc);
@@ -678,7 +681,8 @@ RetType PascalParser::ParameterList (ParserContext &pc)
 	{
 		case (TT::ID):
 			[&] {
-				auto tid = pc.Match (TT::ID);
+				auto tid = pc.Current ();
+				pc.Match (TT::ID);
 
 				pc.Match (TT::COLON);
 				auto t = Type (pc);
@@ -703,7 +707,8 @@ RetType PascalParser::ParameterListPrime (ParserContext &pc)
 		case (TT::SEMICOLON):
 			[&] {
 				pc.Match (TT::SEMICOLON);
-				auto tid = pc.Match (TT::ID);
+				auto tid = pc.Current ();
+				pc.Match (TT::ID);
 				pc.Match (TT::COLON);
 				auto t = Type (pc);
 				bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
@@ -921,9 +926,9 @@ RetType PascalParser::Variable (ParserContext &pc)
 	{
 		case (TT::ID):
 			[&] {
-				auto tid = pc.Match (TT::ID);
-				auto exists = pc.tree.CheckVariable (GetSymbol (tid));
-				if (!exists.has_value ()) { pc.LogErrorIdNotFound (tid); }
+				auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
+				if (!exists.has_value ()) { pc.LogErrorIdNotFound (pc.Current ()); }
+				pc.Match (TT::ID);
 				VariableFactored (pc);
 			}();
 			break;
@@ -965,9 +970,9 @@ RetType PascalParser::ProcedureStatement (ParserContext &pc)
 		case (TT::CALL):
 			[&] {
 				pc.Match (TT::CALL);
-				auto tid = pc.Match (TT::ID);
-				bool exists = pc.tree.CheckProcedure (GetSymbol (tid));
-				if (exists) { pc.LogErrorIdInUse (tid); }
+				bool exists = pc.tree.CheckProcedure (GetSymbol (pc.Current ()));
+				if (exists) { pc.LogErrorIdInUse (pc.Current ()); }
+				pc.Match (TT::ID);
 				ProcedureStatmentFactored (pc);
 			}();
 			break;
@@ -1229,13 +1234,14 @@ RetType PascalParser::Factor (ParserContext &pc)
 	{
 		case (TT::ID):
 			return [&]() -> RetType {
-				auto tid = pc.Match (TT::ID);
-				auto exists = pc.tree.CheckVariable (GetSymbol (tid));
+				auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
 				if (!exists.has_value ())
 				{
-					pc.LogErrorIdNotFound (tid);
+					pc.LogErrorIdNotFound (pc.Current ());
+					pc.Match (TT::ID);
 					return RT_err;
 				}
+				pc.Match (TT::ID);
 				return exists.value ();
 			}();
 			break;

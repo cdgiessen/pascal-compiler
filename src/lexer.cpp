@@ -635,15 +635,22 @@ TokenStream::TokenStream (Lexer &lexer, CompilationContext &compilationContext, 
 	tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
 }
 
-TokenInfo TokenStream::Current () const { return tokens.at (index); }
+TokenInfo TokenStream::Current () const
+{
+	if (index >= tokens.size ()) return tokens.at (tokens.size () - 1);
+
+	return tokens.at (index);
+}
 TokenInfo TokenStream::Advance ()
 {
-	if (index + 1 >= tokens.size ())
-	{
-		auto new_tokens = lexer.GetTokens (sourceCode, compilationContext);
-		if (new_tokens.size () > 0)
-			tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
-	}
-	if (index + 1 < tokens.size ()) index++;
-	return Current ();
+	// if (index + 1 >= tokens.size ())
+	//{
+	//	auto new_tokens = lexer.GetTokens (sourceCode, compilationContext);
+	//	if (new_tokens.size () > 0)
+	//		tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
+	//}
+	// auto t = tokens.at (index);
+	int old = index;
+	if (index + 1 < tokens.size ()) { index++; }
+	return tokens.at (old);
 }

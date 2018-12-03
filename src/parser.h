@@ -93,7 +93,7 @@ class ParseTree
 	void Pop ();
 
 	private:
-	ProcedureID eye = -1;
+	ProcedureID eye = 0;
 	ProcedureID procIDCounter = 0;
 
 	std::unordered_map<ProcedureID, Procedure> procedures;

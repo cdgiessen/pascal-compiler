@@ -119,6 +119,10 @@ class FileReader
 	{
 		try
 		{
+			if (index >= file_list.size ())
+				return {
+
+				};
 			CodeSource lines;
 			std::fstream inFile (file_list.at (index++), std::ios::in);
 			if (inFile)
