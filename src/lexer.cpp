@@ -410,9 +410,13 @@ void Lexer::CreateMachines ()
 			 if (line[0] == ']')
 				 return LexerMachineReturn (1, TokenInfo (TokenType::BRACKET_CLOSE, NoAttrib ()));
 			 if (line[0] == '+')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::plus));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::ADDOP, SignOpEnum::plus));
 			 if (line[0] == '-')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::SIGN, SignOpEnum::minus));
+				 return LexerMachineReturn (1, TokenInfo (TokenType::ADDOP, SignOpEnum::minus));
+			 if (line[0] == '*')
+				 return LexerMachineReturn(1, TokenInfo(TokenType::MULOP, MulOpEnum::mul));
+			 if (line[0] == '/')
+				 return LexerMachineReturn(1, TokenInfo(TokenType::MULOP, MulOpEnum::div));
 			 if (line[0] == '$')
 				 return LexerMachineReturn (1, TokenInfo (TokenType::END_FILE, NoAttrib{}));
 		 }

@@ -16,23 +16,23 @@ procedure gcd(a: integer ; b: integer);
 	begin
 		call gcd(b, a mod b)
 	end;
-	procedure in2; begin end;
+	procedure in2;
 	begin
-		if b = 0 then gcd := a;
+		if b = 0 then gcd := a
 	end;
-	procedure in3();
+	procedure in3(a : real);
 	begin
 	end;
 begin
 	call in1(a, b);
 	call in2;
-	call in3;
+	call in3
 end;
 
 begin
 	x:= 1;
-	x:= 1 mul 1+1 div 1-1;
+	x:= 1 * 1 + 1 div 1 - 1;
 
-	if(x > 5 and x < 100 or y >= 0 and not y <= 100) then x:= 5 else x:= x
-	do x:= x + 1 while x <> 10
+	if x > 5 and (x < 100 or (y >= 0 and not (y <= 100 ) ) ) then x:= 5 else x:= x ;
+	while  x <> 10 do x:= x + 1
 end.

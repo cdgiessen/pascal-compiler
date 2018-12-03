@@ -266,7 +266,7 @@ void PascalParser::OptionalStatements (ParserContext &pc)
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
+		case (TokenType::ID):
 		case (TokenType::WHILE):
 		case (TokenType::BEGIN):
 		case (TokenType::IF):
@@ -276,7 +276,7 @@ void PascalParser::OptionalStatements (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot (
-			{ TokenType::VARIABLE, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
+			{ TokenType::ID, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
 			pc.Synch ({ TokenType::END });
 	}
 }
@@ -284,7 +284,7 @@ void PascalParser::StatementList (ParserContext &pc)
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
+		case (TokenType::ID):
 		case (TokenType::WHILE):
 		case (TokenType::BEGIN):
 		case (TokenType::IF):
@@ -295,7 +295,7 @@ void PascalParser::StatementList (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot (
-			{ TokenType::VARIABLE, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
+			{ TokenType::ID, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
 			pc.Synch ({ TokenType::END });
 	}
 }
@@ -303,8 +303,8 @@ void PascalParser::Statement (ParserContext &pc)
 {
 	switch (pc.Current ().type)
 	{
-		case (TokenType::VARIABLE):
-			pc.Match (TokenType::VARIABLE);
+		case (TokenType::ID):
+			pc.Match (TokenType::ID);
 			pc.Match (TokenType::ASSIGNOP);
 			Expression (pc);
 			break;
@@ -331,7 +331,7 @@ void PascalParser::Statement (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot (
-			{ TokenType::VARIABLE, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
+			{ TokenType::ID, TokenType::WHILE, TokenType::BEGIN, TokenType::IF, TokenType::CALL });
 			pc.Synch ({ TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 	}
 }
@@ -897,9 +897,10 @@ void PascalParser::ProcedureStatmentFactored (ParserContext &pc)
 			break;
 		case (TokenType::SEMICOLON):
 		case (TokenType::ELSE):
+		case (TokenType::END):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TokenType::PAREN_OPEN, TokenType::SEMICOLON, TokenType::ELSE });
+			pc.LogErrorExpectedGot ({ TokenType::PAREN_OPEN, TokenType::SEMICOLON, TokenType::ELSE, TokenType::END });
 			pc.Synch ({ TokenType::ELSE, TokenType::SEMICOLON, TokenType::END });
 	}
 	// e-prod
