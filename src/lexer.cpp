@@ -4,7 +4,7 @@
 #include <cstring>
 
 template <>
-char const *enumStrings<TokenType>::data[] = {
+char const *enumStrings<TT>::data[] = {
 	"PROGRAM",
 	"ID",
 	"PAREN_OPEN",
@@ -42,14 +42,14 @@ char const *enumStrings<TokenType>::data[] = {
 	"LEXERR",
 };
 
-std::string operator+ (const std::string &out, TokenType tt)
+std::string operator+ (const std::string &out, TT tt)
 {
 	std::ostringstream ss;
 	ss << enumToString (tt);
 	return out + ss.str ();
 }
 
-template <> char const *enumStrings<AddOpEnum>::data[] = { "PLUS", "MINUS", "OR" };
+template <> char const *enumStrings<AddOpEnum>::data[] = { "OR" };
 
 template <> char const *enumStrings<MulOpEnum>::data[] = { "MUL", "DIV", "MOD", "AND" };
 
@@ -102,29 +102,28 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 
 std::optional<ReservedWord> Lexer::GetReservedWord (std::string s)
 {
-	if (s == "program") return ReservedWord (s, TokenType::PROGRAM);
-	if (s == "var") return ReservedWord (s, TokenType::VARIABLE);
-	if (s == "array") return ReservedWord (s, TokenType::ARRAY);
-	if (s == "of") return ReservedWord (s, TokenType::OF);
-	if (s == "integer")
-		return ReservedWord (s, TokenType::STANDARD_TYPE, StandardTypeEnum::integer);
-	if (s == "real") return ReservedWord (s, TokenType::STANDARD_TYPE, StandardTypeEnum::real);
-	// if (s == "function") return ReservedWord (s, TokenType::FUNCTION);
-	if (s == "procedure") return ReservedWord (s, TokenType::PROCEDURE);
-	if (s == "begin") return ReservedWord (s, TokenType::BEGIN);
-	if (s == "end") return ReservedWord (s, TokenType::END);
-	if (s == "if") return ReservedWord (s, TokenType::IF);
-	if (s == "then") return ReservedWord (s, TokenType::THEN);
-	if (s == "else") return ReservedWord (s, TokenType::ELSE);
-	if (s == "while") return ReservedWord (s, TokenType::WHILE);
-	if (s == "do") return ReservedWord (s, TokenType::DO);
-	if (s == "not") return ReservedWord (s, TokenType::NOT);
-	if (s == "or") return ReservedWord (s, TokenType::ADDOP, AddOpEnum::t_or);
-	if (s == "and") return ReservedWord (s, TokenType::MULOP, MulOpEnum::t_and);
-	if (s == "div") return ReservedWord (s, TokenType::MULOP, MulOpEnum::div);
-	if (s == "mod") return ReservedWord (s, TokenType::MULOP, MulOpEnum::mod);
-	if (s == "call") return ReservedWord (s, TokenType::CALL);
-	// if (s == "read") return ReservedWord(s, TokenType::ID, Symbo)
+	if (s == "program") return ReservedWord (s, TT::PROGRAM);
+	if (s == "var") return ReservedWord (s, TT::VARIABLE);
+	if (s == "array") return ReservedWord (s, TT::ARRAY);
+	if (s == "of") return ReservedWord (s, TT::OF);
+	if (s == "integer") return ReservedWord (s, TT::STANDARD_TYPE, StandardTypeEnum::integer);
+	if (s == "real") return ReservedWord (s, TT::STANDARD_TYPE, StandardTypeEnum::real);
+	// if (s == "function") return ReservedWord (s, TT::FUNCTION);
+	if (s == "procedure") return ReservedWord (s, TT::PROCEDURE);
+	if (s == "begin") return ReservedWord (s, TT::BEGIN);
+	if (s == "end") return ReservedWord (s, TT::END);
+	if (s == "if") return ReservedWord (s, TT::IF);
+	if (s == "then") return ReservedWord (s, TT::THEN);
+	if (s == "else") return ReservedWord (s, TT::ELSE);
+	if (s == "while") return ReservedWord (s, TT::WHILE);
+	if (s == "do") return ReservedWord (s, TT::DO);
+	if (s == "not") return ReservedWord (s, TT::NOT);
+	if (s == "or") return ReservedWord (s, TT::ADDOP, AddOpEnum::t_or);
+	if (s == "and") return ReservedWord (s, TT::MULOP, MulOpEnum::t_and);
+	if (s == "div") return ReservedWord (s, TT::MULOP, MulOpEnum::div);
+	if (s == "mod") return ReservedWord (s, TT::MULOP, MulOpEnum::mod);
+	if (s == "call") return ReservedWord (s, TT::CALL);
+	// if (s == "read") return ReservedWord(s, TT::ID, Symbo)
 	return {};
 }
 
@@ -146,12 +145,12 @@ void Lexer::ReadReservedWordsFile ()
 				fmt::print ("Reserved word not found! {}\n", word);
 		}
 
-		fmt::print ("Res Word size = {}\n", reservedWords.size ());
-		fmt::print ("Reserved Words:\n");
-		for (auto &item : reservedWords)
-		{
-			fmt::print ("Word: {} \t {}\n", item.word, enumToString (item.type));
-		}
+		// fmt::print ("Res Word size = {}\n", reservedWords.size ());
+		// fmt::print ("Reserved Words:\n");
+		// for (auto &item : reservedWords)
+		//{
+		//	fmt::print ("Word: {} \t {}\n", item.word, enumToString (item.type));
+		//}
 	}
 	else
 	{
@@ -204,78 +203,75 @@ void Lexer::TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachin
 	}
 }
 
-std::vector<TokenInfo> Lexer::GetTokens (CompilationContext &compContext, int ammount)
+std::vector<TokenInfo> Lexer::GetTokens (CodeSource &sourceCode, CompilationContext &compContext)
 {
 	std::vector<TokenInfo> tokens;
 
-	auto lines = compContext.dataSource.Read ();
-	if (lines.has_value ())
+	auto lines = sourceCode;
+	LexerContext context (compContext);
+
+
+	int backward_index = 0;
+	int cur_line_number = 0;
+
+	for (auto &s_line : lines)
 	{
-		LexerContext context (compContext);
+		logger.AddListPrint (
+		cur_line_number, [=](FILE *fp) { fmt::print (fp, "{:<8}{}\n", cur_line_number, s_line); });
 
-
-		int backward_index = 0;
-		int cur_line_number = 0;
-
-
-		for (auto &s_line : lines.value ())
+		while (backward_index < s_line.size ())
 		{
-			logger.AddListPrint (cur_line_number,
-			[=](FILE *fp) { fmt::print (fp, "{:<8}{}\n", cur_line_number, s_line); });
-			while (backward_index < s_line.size ())
+			std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
+
+			auto iter = std::begin (machines);
+			std::optional<LexerMachineReturn> machine_ret = {};
+			while (!machine_ret.has_value () && iter != std::end (machines))
 			{
-				std::string_view buffer = std::string_view (s_line).substr (backward_index, s_line.size ());
+				machine_ret = iter->machine (context, buffer);
 
-				auto iter = std::begin (machines);
-				std::optional<LexerMachineReturn> machine_ret = {};
-				while (!machine_ret.has_value () && iter != std::end (machines))
+				iter++;
+			}
+			if (machine_ret.has_value ())
+			{
+				if (machine_ret->chars_to_eat > 0 && machine_ret->chars_to_eat < line_buffer_length)
 				{
-					machine_ret = iter->machine (context, buffer);
 
-					iter++;
-				}
-				if (machine_ret.has_value ())
-				{
-					if (machine_ret->chars_to_eat > 0 && machine_ret->chars_to_eat < line_buffer_length)
+					backward_index += machine_ret->chars_to_eat;
+					if (machine_ret->content.has_value ())
 					{
+						TokenFilePrinter (
+						cur_line_number, buffer.substr (0, machine_ret->chars_to_eat), machine_ret->content);
 
-						backward_index += machine_ret->chars_to_eat;
-						if (machine_ret->content.has_value ())
-						{
-							TokenFilePrinter (cur_line_number,
-							buffer.substr (0, machine_ret->chars_to_eat),
-							machine_ret->content);
+						machine_ret->content->line_location = cur_line_number;
+						machine_ret->content->column_location = backward_index - machine_ret->chars_to_eat;
 
-							machine_ret->content->line_location = cur_line_number;
-							machine_ret->content->column_location = backward_index - machine_ret->chars_to_eat;
-
-							tokens.push_back (*machine_ret->content);
-						}
+						tokens.push_back (*machine_ret->content);
 					}
 				}
-				else
-				{
-					std::string bad_symbol;
-					bad_symbol.push_back (buffer[0]);
+			}
+			else
+			{
+				std::string bad_symbol;
+				bad_symbol.push_back (buffer[0]);
 
-					machine_ret = LexerMachineReturn (1,
-					TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Unrecognized_Symbol, bad_symbol)));
+				machine_ret = LexerMachineReturn (1,
+				TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::Unrecognized_Symbol, bad_symbol)));
 
-					if (buffer[0] == '$')
-						logger.AddLexErrPrint (cur_line_number, [=](FILE *fp) {
-							fmt::print (fp, "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
-						});
+				if (buffer[0] == '$')
+					logger.AddLexErrPrint (cur_line_number, [=](FILE *fp) {
+						fmt::print (fp, "{:<8}{}\t\n", "LEXERR:", "Unrecognized Symbol: EOF");
+					});
 
-					TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
-					tokens.push_back (*machine_ret->content);
-					backward_index++;
-				}
-				if (machine_ret.has_value () && machine_ret->content->type == TokenType::END_FILE)
-				{ break; } }
-			cur_line_number++;
-			backward_index = 0;
+				TokenFilePrinter (cur_line_number, bad_symbol, machine_ret->content);
+				tokens.push_back (*machine_ret->content);
+				backward_index++;
+			}
+			if (machine_ret.has_value () && machine_ret->content->type == TT::END_FILE) { break; }
 		}
+		cur_line_number++;
+		backward_index = 0;
 	}
+
 
 	return tokens;
 }
@@ -299,7 +295,7 @@ void Lexer::CreateMachines ()
 					 if (line[i] == '{')
 					 {
 						 return LexerMachineReturn (i + 1,
-						 TokenInfo (TokenType::LEXERR,
+						 TokenInfo (TT::LEXERR,
 						 LexerError (LexerErrorEnum::CommentContains2ndLeftCurlyBrace, line.substr (0, i + 1))));
 					 }
 					 i++;
@@ -330,7 +326,7 @@ void Lexer::CreateMachines ()
 	         {
 	             fmt::print ("{}\n", line);
 	             return LexerMachineReturn (i,
-	             TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_NotTerminated, line)));
+	             TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::StrLit_NotTerminated, line)));
 	         }
 	         i++; // needs to include the extra tick mark
 	         auto full_s = line.substr (0, i);
@@ -339,15 +335,15 @@ void Lexer::CreateMachines ()
 	         if (i - 2 <= string_literal_length)
 	         {
 	             int loc = context.literalTable.AddSymbol (tickless_s);
-	             return LexerMachineReturn (i, TokenInfo (TokenType::STR_LIT, StringLiteral (loc)));
+	             return LexerMachineReturn (i, TokenInfo (TT::STR_LIT, StringLiteral (loc)));
 	         }
 	         else
 	         {
 	             return LexerMachineReturn (i,
-	             TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
+	             TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
 	         }
 	         return LexerMachineReturn (i,
-	         TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
+	         TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::StrLit_TooLong, std::string (full_s))));
 	     } });
 	*/
 	AddMachine ({ "Whitespace", 100, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
@@ -372,56 +368,51 @@ void Lexer::CreateMachines ()
 
 		 if (index > identifier_length)
 			 return LexerMachineReturn (index,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Id_TooLong, std::string (sv))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::Id_TooLong, std::string (sv))));
 
 		 auto res_word = CheckReseredWords (sv);
 		 if (res_word.has_value ()) { return LexerMachineReturn (index, res_word.value ()); }
 		 int loc = context.compContext.symbolTable.AddSymbol (sv);
-		 return LexerMachineReturn (index, TokenInfo (TokenType::ID, SymbolType (loc)));
+		 return LexerMachineReturn (index, TokenInfo (TT::ID, SymbolType (loc)));
 	 } });
 
-	AddMachine (
-	{ "Catch-all", 80, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
-		 if (line.size () >= 2)
-		 {
-			 if (line[0] == ':' && line[1] == '=')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::ASSIGNOP, NoAttrib ()));
-			 if (line[0] == '.' && line[1] == '.')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::DOT_DOT, NoAttrib ()));
-		 }
-		 if (line.size () >= 1)
-		 {
-			 if (line[0] == '\0')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::END_FILE, NoAttrib ()));
-			 if (line[0] == '(')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::PAREN_OPEN, NoAttrib ()));
-			 if (line[0] == ')')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::PAREN_CLOSE, NoAttrib ()));
-			 if (line[0] == ';')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::SEMICOLON, NoAttrib ()));
-			 if (line[0] == '.')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::DOT, NoAttrib ()));
-			 if (line[0] == ',')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::COMMA, NoAttrib ()));
-			 if (line[0] == ':')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::COLON, NoAttrib ()));
-			 if (line[0] == '[')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::BRACKET_OPEN, NoAttrib ()));
-			 if (line[0] == ']')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::BRACKET_CLOSE, NoAttrib ()));
-			 if (line[0] == '+')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::ADDOP, SignOpEnum::plus));
-			 if (line[0] == '-')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::ADDOP, SignOpEnum::minus));
-			 if (line[0] == '*')
-				 return LexerMachineReturn(1, TokenInfo(TokenType::MULOP, MulOpEnum::mul));
-			 if (line[0] == '/')
-				 return LexerMachineReturn(1, TokenInfo(TokenType::MULOP, MulOpEnum::div));
-			 if (line[0] == '$')
-				 return LexerMachineReturn (1, TokenInfo (TokenType::END_FILE, NoAttrib{}));
-		 }
-		 return {};
-	 } });
+	AddMachine ({ "Catch-all", 80, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+		             if (line.size () >= 2)
+		             {
+			             if (line[0] == ':' && line[1] == '=')
+				             return LexerMachineReturn (2, TokenInfo (TT::ASSIGNOP, NoAttrib ()));
+			             if (line[0] == '.' && line[1] == '.')
+				             return LexerMachineReturn (2, TokenInfo (TT::DOT_DOT, NoAttrib ()));
+		             }
+		             if (line.size () >= 1)
+		             {
+			             if (line[0] == '\0')
+				             return LexerMachineReturn (1, TokenInfo (TT::END_FILE, NoAttrib ()));
+			             if (line[0] == '(')
+				             return LexerMachineReturn (1, TokenInfo (TT::PAREN_OPEN, NoAttrib ()));
+			             if (line[0] == ')')
+				             return LexerMachineReturn (1, TokenInfo (TT::PAREN_CLOSE, NoAttrib ()));
+			             if (line[0] == ';')
+				             return LexerMachineReturn (1, TokenInfo (TT::SEMICOLON, NoAttrib ()));
+			             if (line[0] == '.')
+				             return LexerMachineReturn (1, TokenInfo (TT::DOT, NoAttrib ()));
+			             if (line[0] == ',')
+				             return LexerMachineReturn (1, TokenInfo (TT::COMMA, NoAttrib ()));
+			             if (line[0] == ':')
+				             return LexerMachineReturn (1, TokenInfo (TT::COLON, NoAttrib ()));
+			             if (line[0] == '[')
+				             return LexerMachineReturn (1, TokenInfo (TT::BRACKET_OPEN, NoAttrib ()));
+			             if (line[0] == ']')
+				             return LexerMachineReturn (1, TokenInfo (TT::BRACKET_CLOSE, NoAttrib ()));
+			             if (line[0] == '+')
+				             return LexerMachineReturn (1, TokenInfo (TT::SIGN, SignOpEnum::plus));
+			             if (line[0] == '-')
+				             return LexerMachineReturn (1, TokenInfo (TT::SIGN, SignOpEnum::minus));
+			             if (line[0] == '$')
+				             return LexerMachineReturn (1, TokenInfo (TT::END_FILE, NoAttrib{}));
+		             }
+		             return {};
+	             } });
 
 	AddMachine (
 	{ "LReal", 60, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
@@ -471,39 +462,37 @@ void Lexer::CreateMachines ()
 
 		 if (pow_size == 0)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal3_TooShort, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal3_TooShort, line.substr (0, i))));
 
 		 // error checking
 
 		 if (base_size > real_base_length)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal1_TooLong, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal1_TooLong, line.substr (0, i))));
 
 		 if (decimal_size > real_decimal_length)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal2_TooLong, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal2_TooLong, line.substr (0, i))));
 
 		 if (pow_size > real_exponent_length)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal3_TooLong, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal3_TooLong, line.substr (0, i))));
 
 		 if (i > 1 && line[0] == '0')
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
-			 LexerError (LexerErrorEnum::LReal1_LeadingZero, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal1_LeadingZero, line.substr (0, i))));
 
 		 if (line[base_size + decimal_size + 2 + hasSign ? 1 : 0] == '0')
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
-			 LexerError (LexerErrorEnum::LReal3_LeadingZero, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal3_LeadingZero, line.substr (0, i))));
 
 		 if (decimal_size == 0)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal2_TooShort, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal2_TooShort, line.substr (0, i))));
 
 		 if (pow_size == 0)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::LReal3_TooShort, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::LReal3_TooShort, line.substr (0, i))));
 
 		 auto sub = line.substr (0, i);
 		 float fval;
@@ -514,11 +503,11 @@ void Lexer::CreateMachines ()
 		 catch (std::exception &e)
 		 {
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
+			 TokenInfo (TT::LEXERR,
 			 LexerError (LexerErrorEnum::LReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
 
-		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType (fval)));
+		 return LexerMachineReturn (i, TokenInfo (TT::NUM, NumType (fval)));
 	 } });
 
 	AddMachine (
@@ -550,19 +539,18 @@ void Lexer::CreateMachines ()
 
 		 if (base_size > real_base_length)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal1_TooLong, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::SReal1_TooLong, line.substr (0, i))));
 
 		 if (decimal_size > real_decimal_length)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal2_TooLong, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::SReal2_TooLong, line.substr (0, i))));
 
 		 if (decimal_size == 0)
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::SReal2_TooShort, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::SReal2_TooShort, line.substr (0, i))));
 		 if (i > 1 && line[0] == '0')
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
-			 LexerError (LexerErrorEnum::SReal1_LeadingZero, line.substr (0, i))));
+			 TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::SReal1_LeadingZero, line.substr (0, i))));
 
 
 		 auto sub = line.substr (0, i);
@@ -574,11 +562,11 @@ void Lexer::CreateMachines ()
 		 catch (std::exception &e)
 		 {
 			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR,
+			 TokenInfo (TT::LEXERR,
 			 LexerError (LexerErrorEnum::SReal_InvalidNumericLiteral, line.substr (0, i))));
 		 }
 
-		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType (fval)));
+		 return LexerMachineReturn (i, TokenInfo (TT::NUM, NumType (fval)));
 	 } });
 
 	AddMachine (
@@ -596,11 +584,11 @@ void Lexer::CreateMachines ()
 		 if (i > integer_digit_length)
 
 			 return LexerMachineReturn (
-			 i, TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Int_TooLong, seq)));
+			 i, TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::Int_TooLong, seq)));
 
 		 if (i > 1 && line[0] == '0')
 			 return LexerMachineReturn (
-			 i, TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Int_LeadingZero, seq)));
+			 i, TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::Int_LeadingZero, seq)));
 
 
 		 try
@@ -610,14 +598,14 @@ void Lexer::CreateMachines ()
 		 catch (std::out_of_range e)
 		 {
 			 return LexerMachineReturn (
-			 i, TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Int_TooLong, seq)));
+			 i, TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::Int_TooLong, seq)));
 		 }
 		 catch (std::invalid_argument e)
 		 {
-			 return LexerMachineReturn (i,
-			 TokenInfo (TokenType::LEXERR, LexerError (LexerErrorEnum::Int_InvalidNumericLiteral, seq)));
+			 return LexerMachineReturn (
+			 i, TokenInfo (TT::LEXERR, LexerError (LexerErrorEnum::Int_InvalidNumericLiteral, seq)));
 		 }
-		 return LexerMachineReturn (i, TokenInfo (TokenType::NUM, NumType (val)));
+		 return LexerMachineReturn (i, TokenInfo (TT::NUM, NumType (val)));
 	 } });
 
 	AddMachine (
@@ -625,38 +613,44 @@ void Lexer::CreateMachines ()
 		 if (line.size () >= 2)
 		 {
 			 if (line[0] == '>' && line[1] == '=')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::RELOP, RelOpEnum::greater_than_or_equal));
+				 return LexerMachineReturn (2, TokenInfo (TT::RELOP, RelOpEnum::greater_than_or_equal));
 			 if (line[0] == '<' && line[1] == '=')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::RELOP, RelOpEnum::less_than_or_equal));
+				 return LexerMachineReturn (2, TokenInfo (TT::RELOP, RelOpEnum::less_than_or_equal));
 			 if (line[0] == '<' && line[1] == '>')
-				 return LexerMachineReturn (2, TokenInfo (TokenType::RELOP, RelOpEnum::not_equal));
+				 return LexerMachineReturn (2, TokenInfo (TT::RELOP, RelOpEnum::not_equal));
 		 }
 		 if (line[0] == '>')
-			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::greater_than));
+			 return LexerMachineReturn (1, TokenInfo (TT::RELOP, RelOpEnum::greater_than));
 		 if (line[0] == '<')
-			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::less_than));
-		 if (line[0] == '=')
-			 return LexerMachineReturn (1, TokenInfo (TokenType::RELOP, RelOpEnum::equal));
+			 return LexerMachineReturn (1, TokenInfo (TT::RELOP, RelOpEnum::less_than));
+		 if (line[0] == '=') return LexerMachineReturn (1, TokenInfo (TT::RELOP, RelOpEnum::equal));
 		 return {};
 	 } });
 }
 
-TokenStream::TokenStream (Lexer &lexer, CompilationContext &compilationContext)
-: compilationContext (compilationContext), lexer (lexer)
+TokenStream::TokenStream (Lexer &lexer, CompilationContext &compilationContext, CodeSource &sourceCode)
+: compilationContext (compilationContext), lexer (lexer), sourceCode (sourceCode)
 {
-	auto new_tokens = lexer.GetTokens (compilationContext);
+	auto new_tokens = lexer.GetTokens (sourceCode, compilationContext);
 	tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
 }
 
-TokenInfo TokenStream::Current () const { return tokens.at (index); }
+TokenInfo TokenStream::Current () const
+{
+	if (index >= tokens.size ()) return tokens.at (tokens.size () - 1);
+
+	return tokens.at (index);
+}
 TokenInfo TokenStream::Advance ()
 {
-	if (index + 1 >= tokens.size ())
-	{
-		auto new_tokens = lexer.GetTokens (compilationContext);
-		if (new_tokens.size () > 0)
-			tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
-	}
-	if (index + 1 < tokens.size ()) index++;
-	return Current ();
+	// if (index + 1 >= tokens.size ())
+	//{
+	//	auto new_tokens = lexer.GetTokens (sourceCode, compilationContext);
+	//	if (new_tokens.size () > 0)
+	//		tokens.insert (std::end (tokens), std::begin (new_tokens), std::end (new_tokens));
+	//}
+	// auto t = tokens.at (index);
+	int old = index;
+	if (index + 1 < tokens.size ()) { index++; }
+	return tokens.at (old);
 }

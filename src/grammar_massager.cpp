@@ -192,14 +192,15 @@ std::vector<std::pair<int, std::string>> CalcOutputOrder (std::map<int, std::str
 	return out_pairs;
 }
 
-void Grammar::PrintTokenList(FILE *fp) {
-	fmt::print(fp, "TOKENS, ");
-	for (auto[key, value] : terminals)
+void Grammar::PrintTokenList (FILE *fp)
+{
+	fmt::print (fp, "TOKENS, ");
+	for (auto [key, value] : terminals)
 	{
 		if (value == ",")
-			fmt::print(fp, "\'comma\', ");
+			fmt::print (fp, "\'comma\', ");
 		else
-			fmt::print(fp, "\'{}\', ", value);
+			fmt::print (fp, "\'{}\', ", value);
 	}
 }
 
@@ -213,7 +214,7 @@ void Grammar::PrintGrammar (std::string out_file_name, std::function<void(FILE *
 	OutputFileHandle ofh (out_file_name);
 
 
-	PrintTokenList(ofh.FP());
+	PrintTokenList (ofh.FP ());
 	fmt::print (ofh.FP (), "\n");
 
 	auto ordered_pairs = CalcOutputOrder (variables);
@@ -235,8 +236,8 @@ void Grammar::PrintGrammar (std::string out_file_name, std::function<void(FILE *
 			prod_index = 1;
 		}
 
-		// fmt::print (ofh.FP (), "({}) {} ->\t", std::to_string (isSame ? var_index - 1 :
-		// var_index), var_string); variable_decorator (ofh.FP (), var);
+		fmt::print (ofh.FP (), "({}) {} ->\t", std::to_string (isSame ? var_index - 1 : var_index), var_string);
+		variable_decorator (ofh.FP (), var);
 
 		// fmt::print (ofh.FP (), "\n");
 		for (int i = 0; i < productions.size (); i++)
@@ -277,7 +278,7 @@ std::map<int, std::string> Grammar::ProperIndexes ()
 	int prod_index = 1;
 	for (auto &[var, var_string] : ordered_pairs)
 	{
-			bool isSame = false;
+		bool isSame = false;
 		if (var_string != "e")
 		{ // special case
 
@@ -303,7 +304,10 @@ std::map<int, std::string> Grammar::ProperIndexes ()
 				}
 			}
 			if (!isSame) var_index++;
-		} else { }
+		}
+		else
+		{
+		}
 	}
 	return out;
 }
@@ -1254,14 +1258,14 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 {
 	OutputFileHandle ofh (out_file_name);
 
-	grammar.PrintTokenList(ofh.FP());
+	grammar.PrintTokenList (ofh.FP ());
 	fmt::print (ofh.FP (), "\n");
 
 	std::map<int, std::string> indices = grammar.ProperIndexes ();
 
 	auto ordered_pairs = CalcOutputOrder (grammar.variables);
 	int i = 0;
-	
+
 	for (auto [key, value] : ordered_pairs)
 	{
 		bool after_e = false;
@@ -1274,12 +1278,11 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 				int count_index = 0;
 				for (auto &index : terms)
 				{
-					if (after_e) {
-						fmt::print(ofh.FP(), "{}", std::stof(indices.at(index)) - 1.0);
-					}
-					else {
+					if (after_e)
+					{ fmt::print (ofh.FP (), "{}", std::stof (indices.at (index)) - 1.0); } else
+					{
 
-					fmt::print (ofh.FP (), "{}", indices.at (index));
+						fmt::print (ofh.FP (), "{}", indices.at (index));
 					}
 					if (count_index++ != terms.size () - 1) fmt::print (ofh.FP (), " | ");
 				}
@@ -1287,7 +1290,8 @@ void ParseTable::PrintParseTableCSV (std::string out_file_name)
 			}
 			fmt::print (ofh.FP (), "\n");
 		}
-		else {
+		else
+		{
 			after_e = true;
 		}
 		i++;
@@ -1298,7 +1302,7 @@ void ParseTable::PrettyPrintParseTableCSV (std::string out_file_name)
 {
 	OutputFileHandle ofh (out_file_name);
 
-	grammar.PrintTokenList(ofh.FP());
+	grammar.PrintTokenList (ofh.FP ());
 	fmt::print (ofh.FP (), "\n");
 
 	auto ordered_pairs = CalcOutputOrder (grammar.variables);

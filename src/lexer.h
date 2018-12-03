@@ -33,7 +33,7 @@ using ProgramLine = std::string_view;
 // std::ostream &operator<< (std::ostream &os, const ProgramLine &t);
 
 
-enum class TokenType
+enum class TT
 {
 	PROGRAM,
 	ID,
@@ -72,7 +72,7 @@ enum class TokenType
 	LEXERR,
 };
 
-std::string operator+ (const std::string &out, TokenType tt);
+std::string operator+ (const std::string &out, TT tt);
 
 struct NoAttrib
 {
@@ -92,9 +92,9 @@ struct SymbolType
 
 enum class AddOpEnum
 {
-	plus,  //+
-	minus, //-
-	t_or   // or
+	// plus,  //+
+	// minus, //-
+	t_or // or
 };
 
 enum class MulOpEnum
@@ -222,14 +222,14 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t);
 
 struct TokenInfo
 {
-	TokenType type;
+	TT type;
 	TokenAttribute attrib;
 	int line_location = -1;
 	int column_location = -1;
 
-	TokenInfo (TokenType type, TokenAttribute attrib) : type (type), attrib (attrib) {}
+	TokenInfo (TT type, TokenAttribute attrib) : type (type), attrib (attrib) {}
 
-	TokenInfo (TokenType type, TokenAttribute attrib, int line, int column)
+	TokenInfo (TT type, TokenAttribute attrib, int line, int column)
 	: type (type), attrib (attrib), line_location (line), column_location (column)
 	{
 	}
@@ -243,10 +243,10 @@ struct TokenInfo
 struct ReservedWord
 {
 	std::string word;
-	TokenType type;
+	TT type;
 	TokenAttribute attrib;
 
-	ReservedWord (std::string word, TokenType type, TokenAttribute attrib = NoAttrib{})
+	ReservedWord (std::string word, TT type, TokenAttribute attrib = NoAttrib{})
 	: word (word), type (type), attrib (attrib){};
 
 	bool operator== (const ReservedWord &other) const
@@ -311,7 +311,7 @@ class Lexer;
 class TokenStream
 {
 	public:
-	TokenStream (Lexer &lexer, CompilationContext &compilationContext);
+	TokenStream (Lexer &lexer, CompilationContext &compilationContext, CodeSource &sourceCode);
 
 	TokenInfo Current () const;
 	TokenInfo Advance ();
@@ -320,6 +320,7 @@ class TokenStream
 	int index = 0;
 	std::vector<TokenInfo> tokens;
 	CompilationContext &compilationContext;
+	CodeSource &sourceCode;
 	Lexer &lexer;
 };
 
@@ -337,7 +338,7 @@ class Lexer
 
 	void AddMachine (LexerMachine &&machine);
 
-	std::vector<TokenInfo> GetTokens (CompilationContext &context, int ammount = 1);
+	std::vector<TokenInfo> GetTokens (CodeSource &sourceCode, CompilationContext &context);
 
 	void TokenFilePrinter (int line_num, std::string_view lexeme, LexerMachineReturn::OptionalToken content);
 

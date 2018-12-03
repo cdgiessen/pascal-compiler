@@ -1,0 +1,39 @@
+program example(input, output);
+
+var x: integer;
+var y: array [0 .. 10.0] of real;
+var z: array [0 .. 10] of integer;
+
+procedure gcd(a: integer ; b: integer);
+begin
+	if b = 0 then gcd := a;
+	call gcd(b, a mod b, a)
+    call in1;
+end;
+
+procedure gcd(a: array [ 0 .. 0] of integer ; b: integer);
+	procedure in(a: integer ; b: integer);
+	var x: real;
+	begin
+		call gcd(b, a mod b)
+	end;
+	procedure in2; begin end;
+	begin
+		if b = 0 then gcd := a;
+	end;
+	procedure in3();
+	begin
+	end;
+begin
+	call in1(a, b);
+	call in2;
+	call in3;
+end;
+
+begin
+	x:= 1;
+	x:= 1 mul 1+1 div 1-1;
+
+	if(x > 5 and x < 100 or y >= 0 and not y <= 100) then x:= 5 else x:= x
+	do x:= x + 1 while x <> 10
+end.

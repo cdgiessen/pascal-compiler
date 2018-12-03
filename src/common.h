@@ -80,6 +80,10 @@ class Logger
 	{
 		syn_errors[index].push_back (func);
 	}
+	void AddSemErrPrint (int index, std::function<void(FILE *fp)> func)
+	{
+		sem_errors[index].push_back (func);
+	}
 
 	void LogErrors ()
 	{
@@ -87,34 +91,39 @@ class Logger
 		{
 			for (auto &func : vec)
 				func (listing_file.FP ());
-			// for (auto [key, vec] : lex_errors)
 			if (lex_errors.count (key))
 				for (auto &func : lex_errors.at (key))
 					func (listing_file.FP ());
-			// for (auto [key, vec] : syn_errors)
 			if (syn_errors.count (key))
 				for (auto &func : syn_errors.at (key))
+					func (listing_file.FP ());
+			if (sem_errors.count (key))
+				for (auto &func : sem_errors.at (key))
 					func (listing_file.FP ());
 		}
 	}
 	std::map<int, std::vector<std::function<void(FILE *fp)>>> listing;
 	std::map<int, std::vector<std::function<void(FILE *fp)>>> lex_errors;
 	std::map<int, std::vector<std::function<void(FILE *fp)>>> syn_errors;
+	std::map<int, std::vector<std::function<void(FILE *fp)>>> sem_errors;
 };
+
+using CodeSource = std::vector<std::string>;
 
 class FileReader
 {
 	public:
-	FileReader (Logger &logger, std::vector<std::string> file_list)
-	: logger (logger), file_list (file_list)
-	{
-	}
+	FileReader (std::vector<std::string> file_list) : file_list (file_list) {}
 
-	std::optional<std::vector<std::string>> Read ()
+	std::optional<CodeSource> Read ()
 	{
 		try
 		{
-			std::vector<std::string> lines;
+			if (index >= file_list.size ())
+				return {
+
+				};
+			CodeSource lines;
 			std::fstream inFile (file_list.at (index++), std::ios::in);
 			if (inFile)
 			{
@@ -144,8 +153,6 @@ class FileReader
 	}
 
 	private:
-	Logger &logger;
-
 	int index = 0;
 	std::vector<std::string> file_list;
 };
@@ -153,10 +160,6 @@ class FileReader
 class CompilationContext
 {
 	public:
-	CompilationContext (FileReader &dataSource) : dataSource (dataSource) {}
-
 	SymbolTable symbolTable;
 	SymbolTable literalTable;
-
-	FileReader &dataSource;
 };
