@@ -14,11 +14,11 @@ class Compiler
 
 		TokenStream ts (lexer, context, source);
 
-		ParserContext ct (ts, logger);
+		ParserContext ct (context, ts, logger);
 		parser.Parse (ct);
 
-		OutputFileHandle sym("symbol_file.txt");
-		context.symbolTable.Print(sym);
+		OutputFileHandle sym ("symbol_file.txt");
+		context.symbolTable.Print (sym);
 	}
 
 	Logger logger;
@@ -30,7 +30,7 @@ class Compiler
 int main (int argc, char *argv[])
 {
 	std::vector<std::string> file_list;
-	//file_list.push_back ("test_input/test_some_errors.txt");
+	// file_list.push_back ("test_input/test_some_errors.txt");
 	file_list.push_back ("test_input/test_sem.txt");
 
 

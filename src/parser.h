@@ -10,7 +10,7 @@
 
 struct RetType
 {
-	RetType (const uint32_t cat, uint32_t size) { data = (size << 8) | static_cast<uint8_t> (cat); }
+	RetType (const uint32_t cat, uint32_t size) { data = (size << 8) | (cat); }
 	RetType (const uint32_t t) { data = t; }
 
 	uint32_t data;
@@ -22,12 +22,12 @@ struct RetType
 		if (data == 2) return "bool";
 		if (data == 3) return "int";
 		if (data == 4) return "real";
-		if (static_cast<uint8_t> (data) == 5)
+		if ((data & 255) == 5)
 		{
 			int size = data >> 8;
 			return "arr_int;size=" + std::to_string (size);
 		}
-		if (static_cast<uint8_t> (data) == 6)
+		if ((data & 255) == 6)
 		{
 			int size = data >> 8;
 			return "arr_real;size=" + std::to_string (size);
@@ -35,8 +35,6 @@ struct RetType
 		return "";
 	}
 };
-
-
 
 // using RetType = std::variant<Type_bool, Type_int, Type_real, Type_arr_int, Type_arr_real, Type_none, Type_err>;
 
@@ -103,30 +101,28 @@ class ParseTree
 class ParserContext
 {
 	public:
-	ParserContext (TokenStream &ts, Logger &logger);
+	ParserContext (CompilationContext &context, TokenStream &ts, Logger &logger);
 
 	TokenInfo Current () const;
 
 	TokenInfo Match (TT tt);
 	void Synch (std::vector<TT> set);
 
-	void LogError (int line_loc, std::string str);
 	void LogErrorExpectedGot (std::vector<TT> types);
 
-	void LogErrorProcInUse (TokenInfo ti);
-	void LogErrorProcNotFound (TokenInfo ti);
+	void LogErrorSem (std::string msg);
 
-	void LogErrorIdInUse (TokenInfo ti);
-	void LogErrorIdNotFound (TokenInfo ti);
+	void LogErrorProcedureScope (TokenInfo t);
+	void LogErrorUniqueProcedure (TokenInfo t);
+	void LogErrorIdentifierScope (TokenInfo t);
+	void LogErrorUniqueIdentifier (TokenInfo t);
 
-	void LogErrorType (TokenInfo ti, RetType expected);
-	void LogErrorType (TokenInfo ti, std::vector<RetType> expecteds);
-
-	void LogErrorSem(std::string msg);
+	std::string SymbolName (SymbolID);
 
 	ParseTree tree;
 
 	private:
+	CompilationContext &context;
 	TokenInfo Advance ();
 	Logger &logger;
 	TokenStream &ts;
@@ -182,5 +178,6 @@ class PascalParser
 	RetType Term (ParserContext &pc);
 	RetType TermPrime (ParserContext &pc);
 	RetType Factor (ParserContext &pc);
+	RetType FactorPrime (ParserContext &pc, RetType in);
 	RetType Sign (ParserContext &pc);
 };

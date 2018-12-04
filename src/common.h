@@ -52,11 +52,21 @@ class SymbolTable
 		return -1;
 	}
 
-	void Print(OutputFileHandle& out) {
-		fmt::print(out.FP(), "Symbol Table\n");
+	std::string SymbolView (int loc)
+	{
+		if (loc > 0 && loc < symbols.size ())
+			return symbols.at (loc);
+		else
+			throw "Symbol not found!";
+	}
+
+	void Print (OutputFileHandle &out)
+	{
+		fmt::print (out.FP (), "Symbol Table\n");
 		int i = 0;
-		for (auto& s : symbols) {
-			fmt::print(out.FP(), "{:<6}{}\n", std::to_string(i++), s);
+		for (auto &s : symbols)
+		{
+			fmt::print (out.FP (), "{:<6}{}\n", std::to_string (i++), s);
 		}
 	}
 

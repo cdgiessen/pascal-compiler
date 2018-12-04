@@ -87,7 +87,7 @@ term ->
 
 factor ->
     id
-    | id ( expression_list)
+    | id [ expression_list ]
     | num
     | ( expression )
     | not factor
