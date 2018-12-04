@@ -400,12 +400,17 @@ RetType PascalParser::Declarations (ParserContext &pc)
 		case (TT::VARIABLE):
 			[&] {
 				pc.Match (TT::VARIABLE);
-				auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
-				if (exists.has_value ()) { pc.LogErrorIdNotFound (pc.Current ()); }
+				auto tid = pc.Current ();
 				pc.Match (TT::ID);
 
 				pc.Match (TT::COLON);
-				Type (pc);
+				auto t = Type (pc);
+				if (HasSymbol (tid))
+				{
+					auto exists = pc.tree.AddVariable (GetSymbol (tid), t, false);
+					if (exists) { pc.LogErrorIdNotFound (tid); }
+				}
+
 				pc.Match (TT::SEMICOLON);
 				DeclarationsPrime (pc);
 			}();
@@ -431,8 +436,11 @@ RetType PascalParser::DeclarationsPrime (ParserContext &pc)
 				pc.Match (TT::ID);
 				pc.Match (TT::COLON);
 				auto tt = Type (pc);
-				auto exists = pc.tree.AddVariable (GetSymbol (tid), tt, false);
-				if (exists) { pc.LogErrorIdInUse (tid); }
+				if (HasSymbol (tid))
+				{
+					auto exists = pc.tree.AddVariable (GetSymbol (tid), tt, false);
+					if (exists) { pc.LogErrorIdInUse (tid); }
+				}
 				pc.Match (TT::SEMICOLON);
 				DeclarationsPrime (pc);
 			}();
@@ -1177,8 +1185,13 @@ RetType PascalParser::SimpleExpressionPrime (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
+		case (TT::SIGN):
 		case (TT::ADDOP):
-			pc.Match (TT::ADDOP);
+			if (pc.Current ().type == TT::ADDOP) { pc.Match (TT::ADDOP); }
+			else if (pc.Current ().type == TT::SIGN)
+			{
+				pc.Match (TT::SIGN);
+			}
 			Term (pc);
 			SimpleExpressionPrime (pc);
 			break;
@@ -1194,7 +1207,7 @@ RetType PascalParser::SimpleExpressionPrime (ParserContext &pc)
 			break;
 		default:
 			pc.LogErrorExpectedGot (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			pc.Synch (
 			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
@@ -1219,7 +1232,7 @@ RetType PascalParser::Term (ParserContext &pc)
 		default:
 			pc.LogErrorExpectedGot ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT });
 			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::ADDOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::ADDOP, TT::SIGN, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
@@ -1235,6 +1248,7 @@ RetType PascalParser::TermPrime (ParserContext &pc)
 			Factor (pc);
 			TermPrime (pc);
 			break;
+		case (TT::SIGN):
 		case (TT::ADDOP):
 		case (TT::RELOP):
 		case (TT::PAREN_CLOSE):
@@ -1252,6 +1266,7 @@ RetType PascalParser::TermPrime (ParserContext &pc)
 			TT::BRACKET_CLOSE,
 			TT::COMMA,
 			TT::MULOP,
+			TT::SIGN,
 			TT::ADDOP,
 			TT::RELOP,
 			TT::THEN,
@@ -1259,7 +1274,7 @@ RetType PascalParser::TermPrime (ParserContext &pc)
 			TT::DO,
 			TT::END });
 			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::END, TT::DO });
+			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::END, TT::DO });
 			return RT_err;
 	}
 	return ret;
@@ -1311,6 +1326,7 @@ RetType PascalParser::Factor (ParserContext &pc)
 			TT::BRACKET_CLOSE,
 			TT::COMMA,
 			TT::RELOP,
+			TT::SIGN,
 			TT::ADDOP,
 			TT::MULOP,
 			TT::THEN,

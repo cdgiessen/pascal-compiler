@@ -33,6 +33,6 @@ begin
 	x:= 1;
 	x:= 1 * 1+1 / 1-1;
 
-	if(x > 5 and x < 100 or y >= 0 and not y <= 100) then x:= 5 else x:= x
-	do x:= x + 1 while x <> 10
+	if(x > 5 and ( x < 100 or (y >= 0 and not (y <= 100)))) then x:= 5 else x:= x;
+	while x <> 10 do x:= x + 1 
 end.
