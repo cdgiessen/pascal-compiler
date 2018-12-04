@@ -122,6 +122,7 @@ class ParserContext
 	void LogErrorType (TokenInfo ti, RetType expected);
 	void LogErrorType (TokenInfo ti, std::vector<RetType> expecteds);
 
+	void LogErrorSem(std::string msg);
 
 	ParseTree tree;
 

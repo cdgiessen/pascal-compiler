@@ -404,6 +404,10 @@ void Lexer::CreateMachines ()
 				             return LexerMachineReturn (1, TokenInfo (TT::BRACKET_OPEN, NoAttrib ()));
 			             if (line[0] == ']')
 				             return LexerMachineReturn (1, TokenInfo (TT::BRACKET_CLOSE, NoAttrib ()));
+						 if (line[0] == '*')
+							 return LexerMachineReturn(1, TokenInfo(TT::MULOP, MulOpEnum::mul));
+						 if (line[0] == '/')
+							 return LexerMachineReturn(1, TokenInfo(TT::MULOP, MulOpEnum::div));
 			             if (line[0] == '+')
 				             return LexerMachineReturn (1, TokenInfo (TT::SIGN, SignOpEnum::plus));
 			             if (line[0] == '-')

@@ -52,6 +52,14 @@ class SymbolTable
 		return -1;
 	}
 
+	void Print(OutputFileHandle& out) {
+		fmt::print(out.FP(), "Symbol Table\n");
+		int i = 0;
+		for (auto& s : symbols) {
+			fmt::print(out.FP(), "{:<6}{}\n", std::to_string(i++), s);
+		}
+	}
+
 	private:
 	std::vector<std::string> symbols;
 };

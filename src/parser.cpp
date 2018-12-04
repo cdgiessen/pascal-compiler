@@ -18,7 +18,7 @@ ProcedureID ParseTree::SetStartProcedure (SymbolID name)
 ProcedureID ParseTree::AddSubProcedure (SymbolID newProcName)
 {
 	ProcedureID curProc = eye;
-	do
+	while (curProc != -1)
 	{
 		for (auto [id, name] : procedures.at (curProc).sub_procs)
 		{
@@ -29,7 +29,7 @@ ProcedureID ParseTree::AddSubProcedure (SymbolID newProcName)
 			}
 		}
 		curProc = procedures.at (curProc).parent;
-	} while (procedures.at (curProc).parent != -1);
+	}
 
 	procedures.emplace (std::make_pair (procIDCounter, Procedure (newProcName, eye)));
 
@@ -40,14 +40,14 @@ ProcedureID ParseTree::AddSubProcedure (SymbolID newProcName)
 bool ParseTree::CheckProcedure (SymbolID s)
 {
 	ProcedureID curProc = eye;
-	do
+	while (curProc != -1)
 	{
 		for (auto [id, name] : procedures.at (curProc).sub_procs)
 		{
 			if (id == s) { return true; }
 		}
 		curProc = procedures.at (curProc).parent;
-	} while (procedures.at (curProc).parent != -1);
+	}
 	return false;
 }
 
@@ -140,8 +140,8 @@ void ParserContext::LogErrorProcInUse (TokenInfo ti)
 {
 	using namespace std::string_literals;
 
-	std::string out = "SYNERR: "s;
-	out += "Procedure Id not unique \n";
+	std::string out = "SEMERR: "s;
+	out += "Procedure Id not unique";
 
 	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
@@ -149,8 +149,8 @@ void ParserContext::LogErrorProcNotFound (TokenInfo ti)
 {
 	using namespace std::string_literals;
 
-	std::string out = "SYNERR: "s;
-	out += "Procedure Id not found \n";
+	std::string out = "SEMERR: "s;
+	out += "Procedure Id not found";
 
 	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
@@ -159,8 +159,8 @@ void ParserContext::LogErrorIdInUse (TokenInfo ti)
 {
 	using namespace std::string_literals;
 
-	std::string out = "SYNERR: "s;
-	out += "Id not unique \n";
+	std::string out = "SEMERR: "s;
+	out += "Id not unique";
 
 	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
@@ -168,8 +168,8 @@ void ParserContext::LogErrorIdNotFound (TokenInfo ti)
 {
 	using namespace std::string_literals;
 
-	std::string out = "SYNERR: "s;
-	out += "Id not found \n";
+	std::string out = "SEMERR: "s;
+	out += "Id not found";
 
 	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
@@ -178,8 +178,8 @@ void ParserContext::LogErrorType (TokenInfo ti, RetType expected)
 {
 	using namespace std::string_literals;
 
-	std::string out = "SYNERR: "s;
-	out += "Expected " + expected.to_string () + "\n";
+	std::string out = "SEMERR: "s;
+	out += "Expected " + expected.to_string ();
 
 	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
@@ -187,13 +187,23 @@ void ParserContext::LogErrorType (TokenInfo ti, std::vector<RetType> expecteds)
 {
 	using namespace std::string_literals;
 
-	std::string out = "SYNERR: "s;
+	std::string out = "SEMERR: "s;
 	out += "Expected ";
 	for (auto &e : expecteds)
 	{
 		out += e.to_string () + ", ";
 	}
-	out += "\n";
+
+	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
+}
+
+
+void ParserContext::LogErrorSem (std::string msg)
+{
+	using namespace std::string_literals;
+
+	std::string out = "SEMERR: "s;
+	out += msg;
 
 	logger.AddSemErrPrint (Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", out); });
 }
@@ -209,6 +219,7 @@ TokenInfo ParserContext::Match (TT tt)
 
 	else if (tt == Current ().type && tt == TT::END_FILE)
 	{
+		return Current ();
 	}
 	// throw "End of Parse";
 
@@ -234,6 +245,7 @@ void ParserContext::Synch (std::vector<TT> set)
 			if (s == tt) found = true;
 	}
 }
+bool HasSymbol (TokenInfo t) { return std::holds_alternative<SymbolType> (t.attrib); }
 int GetSymbol (TokenInfo t) { return std::get<SymbolType> (t.attrib).loc; }
 int GetNumValInt (TokenInfo t) { return std::get<int> (std::get<NumType> (t.attrib).val); }
 float GetNumValReal (TokenInfo t) { return std::get<float> (std::get<NumType> (t.attrib).val); }
@@ -243,16 +255,16 @@ PascalParser::PascalParser (Logger &logger) : logger (logger) {}
 
 void PascalParser::Parse (ParserContext &pc)
 {
-	try
-	{
-		auto v = ProgramStatement (pc);
-		pc.Match (TT::END_FILE);
-	}
-	catch (std::exception &err)
-	{
-		fmt::print (std::string (err.what ()) + "\n");
-		// found end file token, don't continue parsing
-	}
+	// try
+	//{
+	auto v = ProgramStatement (pc);
+	pc.Match (TT::END_FILE);
+	//}
+	// catch (std::exception &err)
+	//{
+	//	fmt::print (std::string (err.what ()) + "\n");
+	//	// found end file token, don't continue parsing
+	//}
 }
 
 RetType PascalParser::ProgramStatement (ParserContext &pc)
@@ -266,7 +278,7 @@ RetType PascalParser::ProgramStatement (ParserContext &pc)
 				pc.Match (TT::PROGRAM);
 
 				ProcedureID cur = pc.tree.SetStartProcedure (GetSymbol (pc.Current ()));
-				if (cur == -1) pc.LogErrorProcInUse (pc.Current ());
+				if (cur == -1) { pc.LogErrorProcInUse (pc.Current ()); }
 				pc.tree.Push (cur);
 				pc.Match (TT::ID);
 
@@ -417,11 +429,11 @@ RetType PascalParser::DeclarationsPrime (ParserContext &pc)
 				pc.Match (TT::VARIABLE);
 				auto tid = pc.Current ();
 				pc.Match (TT::ID);
-				Type (pc);
-				auto t = pc.Match (TT::SEMICOLON);
-				auto exists = pc.tree.CheckVariable (GetSymbol (tid));
-				if (!exists.has_value ()) { pc.LogErrorIdNotFound (tid); }
 				pc.Match (TT::COLON);
+				auto tt = Type (pc);
+				auto exists = pc.tree.AddVariable (GetSymbol (tid), tt, false);
+				if (exists) { pc.LogErrorIdInUse (tid); }
+				pc.Match (TT::SEMICOLON);
 				DeclarationsPrime (pc);
 			}();
 			break;
@@ -446,16 +458,16 @@ RetType PascalParser::Type (ParserContext &pc)
 			[&]() -> RetType {
 				pc.Match (TT::ARRAY);
 				pc.Match (TT::BRACKET_OPEN);
-				auto ts = pc.Match (TT::NUM);
+				auto ts = pc.Current ();
 				if (std::get<NumType> (ts.attrib).val.index () != 0)
-				{ pc.LogErrorType (ts, RT_int); } pc.Match (TT::DOT_DOT);
+				{ pc.LogErrorType (ts, RT_int); } pc.Match (TT::NUM);
+				pc.Match (TT::DOT_DOT);
 
-				auto te = pc.Match (TT::NUM);
-				if (std::get<NumType> (te.attrib).val.index () != 0) pc.Match (TT::OF);
-				{
-					pc.LogErrorType (te, RT_int);
-				}
+				auto te = pc.Current ();
+				if (std::get<NumType> (te.attrib).val.index () != 0)
+				{ pc.LogErrorType (te, RT_int); } pc.Match (TT::NUM);
 				pc.Match (TT::BRACKET_CLOSE);
+				pc.Match (TT::OF);
 				auto t = StandardType (pc);
 				if (t == RT_int)
 				{ return RetType (RT_arr_int, GetNumValInt (te) - GetNumValInt (ts)); }
@@ -686,8 +698,11 @@ RetType PascalParser::ParameterList (ParserContext &pc)
 
 				pc.Match (TT::COLON);
 				auto t = Type (pc);
-				bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
-				if (exists) { pc.LogErrorIdInUse (tid); }
+				if (HasSymbol (tid))
+				{
+					bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
+					if (exists) { pc.LogErrorIdInUse (tid); }
+				}
 				ParameterListPrime (pc);
 			}();
 			break;
@@ -711,8 +726,11 @@ RetType PascalParser::ParameterListPrime (ParserContext &pc)
 				pc.Match (TT::ID);
 				pc.Match (TT::COLON);
 				auto t = Type (pc);
-				bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
-				if (exists) { pc.LogErrorIdInUse (tid); }
+				if (HasSymbol (tid))
+				{
+					bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
+					if (exists) { pc.LogErrorIdInUse (tid); }
+				}
 				ParameterListPrime (pc);
 			}();
 			break;
@@ -838,10 +856,19 @@ RetType PascalParser::Statement (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
-			pc.Match (TT::VARIABLE);
-			pc.Match (TT::ASSIGNOP);
-			Expression (pc);
+		case (TT::ID):
+			return [&]() -> RetType {
+				auto ret = Variable (pc);
+				pc.Match (TT::ASSIGNOP);
+				auto eret = Expression (pc);
+
+				if (ret != eret)
+				{
+					pc.LogErrorSem ("Var & expr have dif type yo!");
+					return RT_err;
+				}
+				return RT_none;
+			}();
 			break;
 		case (TT::WHILE):
 			pc.Match (TT::WHILE);
@@ -925,11 +952,13 @@ RetType PascalParser::Variable (ParserContext &pc)
 	switch (pc.Current ().type)
 	{
 		case (TT::ID):
-			[&] {
+			[&]() -> RetType {
 				auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
 				if (!exists.has_value ()) { pc.LogErrorIdNotFound (pc.Current ()); }
 				pc.Match (TT::ID);
-				VariableFactored (pc);
+				auto ret = VariableFactored (pc);
+				if (ret == RT_int) {}
+				return RT_none;
 			}();
 			break;
 
@@ -947,11 +976,20 @@ RetType PascalParser::VariableFactored (ParserContext &pc)
 	switch (pc.Current ().type)
 	{
 		case (TT::BRACKET_OPEN):
-			pc.Match (TT::BRACKET_OPEN);
-			Expression (pc);
-			pc.Match (TT::BRACKET_CLOSE);
+			[&]() -> RetType {
+				pc.Match (TT::BRACKET_OPEN);
+				auto ret = Expression (pc);
+				pc.Match (TT::BRACKET_CLOSE);
+				if (ret != RT_int)
+				{
+					pc.LogErrorSem ("Array index not an int yo!");
+					return RT_err;
+				}
+				return RT_int;
+			}();
 			break;
 		case (TT::ASSIGNOP):
+			return RT_none;
 			break;
 		default:
 			pc.LogErrorExpectedGot ({ TT::BRACKET_OPEN, TT::ASSIGNOP });
@@ -999,6 +1037,7 @@ RetType PascalParser::ProcedureStatmentFactored (ParserContext &pc)
 			break;
 		case (TT::SEMICOLON):
 		case (TT::ELSE):
+		case (TT::END):
 			break;
 		default:
 			pc.LogErrorExpectedGot ({ TT::PAREN_OPEN, TT::SEMICOLON, TT::ELSE });
