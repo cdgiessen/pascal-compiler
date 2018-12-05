@@ -11,7 +11,7 @@ char const *enumStrings<TT>::data[] = {
 	"PAREN_CLOSE",
 	"SEMICOLON",
 	"DOT",
-	"VARIABLE",
+	"VAR",
 	"COLON",
 	"ARRAY",
 	"BRACKET_OPEN",
@@ -103,7 +103,7 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 std::optional<ReservedWord> Lexer::GetReservedWord (std::string s)
 {
 	if (s == "program") return ReservedWord (s, TT::PROGRAM);
-	if (s == "var") return ReservedWord (s, TT::VARIABLE);
+	if (s == "var") return ReservedWord (s, TT::VAR);
 	if (s == "array") return ReservedWord (s, TT::ARRAY);
 	if (s == "of") return ReservedWord (s, TT::OF);
 	if (s == "integer") return ReservedWord (s, TT::STANDARD_TYPE, StandardTypeEnum::integer);

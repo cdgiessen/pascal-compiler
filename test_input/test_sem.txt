@@ -25,7 +25,9 @@ program example(input, output, output);
 	procedure in2;
 		begin 
 		end;
-
+	procedure in3 (x:integer;y:real);
+		begin 
+		end;
 begin
 	call in1(a, b);
 	call in2;
@@ -35,6 +37,8 @@ begin
 
 	if x > 5 and ( x < 100 or (y >= 0 and not (y <= 100))) then x:= 5 else x:= x;
 	while x <> 10 do x:= x + 1;
+
+	if x + 5* a > x / a* 4 then call in3(x < 4 + (x*x+x/x-x)*(x) - 4) ;
 
 	y[0] := 0;
 	y := y[0];

@@ -128,15 +128,9 @@ class ParserContext
 	TokenStream &ts;
 };
 
-class PascalParser
+namespace Parser
 {
-	public:
-	PascalParser (Logger &logger);
-
 	void Parse (ParserContext &pc);
-
-	private:
-	Logger &logger;
 
 	RetType ProgramStatement (ParserContext &pc);
 	RetType ProgramStatementFactored (ParserContext &pc);
@@ -168,16 +162,16 @@ class PascalParser
 	RetType Variable (ParserContext &pc);
 	RetType VariableFactored (ParserContext &pc);
 	RetType ProcedureStatement (ParserContext &pc);
-	RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id);
-	RetType ExpressionList (ParserContext &pc, std::vector < RetType>& expr_list);
-	RetType ExpressionListPrime (ParserContext &pc, std::vector < RetType>& expr_list);
-	RetType Expression (ParserContext &pc);
-	RetType ExpressionFactored (ParserContext &pc);
-	RetType SimpleExpression (ParserContext &pc);
-	RetType SimpleExpressionPrime (ParserContext &pc);
-	RetType Term (ParserContext &pc);
-	RetType TermPrime (ParserContext &pc);
-	RetType Factor (ParserContext &pc);
+	RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id, RetType in);
+	RetType ExpressionList (ParserContext &pc, std::vector < RetType>& expr_list, RetType in);
+	RetType ExpressionListPrime (ParserContext &pc, std::vector < RetType>& expr_list, RetType in);
+	RetType Expression (ParserContext &pc, RetType in);
+	RetType ExpressionFactored (ParserContext &pc, RetType in);
+	RetType SimpleExpression (ParserContext &pc, RetType in);
+	RetType SimpleExpressionPrime (ParserContext &pc, RetType in);
+	RetType Term (ParserContext &pc, RetType in);
+	RetType TermPrime (ParserContext &pc, RetType in);
+	RetType Factor (ParserContext &pc, RetType in);
 	RetType FactorPrime (ParserContext &pc, RetType in);
 	RetType Sign (ParserContext &pc);
 };
