@@ -102,14 +102,14 @@ std::ostream &operator<< (std::ostream &os, const TokenAttribute &t)
 
 std::optional<ReservedWord> Lexer::GetReservedWord (std::string s)
 {
-	if (s == "program") return ReservedWord (s, TT::PROGRAM);
+	if (s == "program") return ReservedWord (s, TT::PROG);
 	if (s == "var") return ReservedWord (s, TT::VAR);
 	if (s == "array") return ReservedWord (s, TT::ARRAY);
 	if (s == "of") return ReservedWord (s, TT::OF);
-	if (s == "integer") return ReservedWord (s, TT::STANDARD_TYPE, StandardTypeEnum::integer);
-	if (s == "real") return ReservedWord (s, TT::STANDARD_TYPE, StandardTypeEnum::real);
+	if (s == "integer") return ReservedWord (s, TT::STD_T, StandardTypeEnum::integer);
+	if (s == "real") return ReservedWord (s, TT::STD_T, StandardTypeEnum::real);
 	// if (s == "function") return ReservedWord (s, TT::FUNCTION);
-	if (s == "procedure") return ReservedWord (s, TT::PROCEDURE);
+	if (s == "procedure") return ReservedWord (s, TT::PROC);
 	if (s == "begin") return ReservedWord (s, TT::BEGIN);
 	if (s == "end") return ReservedWord (s, TT::END);
 	if (s == "if") return ReservedWord (s, TT::IF);
@@ -380,7 +380,7 @@ void Lexer::CreateMachines ()
 		             if (line.size () >= 2)
 		             {
 			             if (line[0] == ':' && line[1] == '=')
-				             return LexerMachineReturn (2, TokenInfo (TT::ASSIGNOP, NoAttrib ()));
+				             return LexerMachineReturn (2, TokenInfo (TT::A_OP, NoAttrib ()));
 			             if (line[0] == '.' && line[1] == '.')
 				             return LexerMachineReturn (2, TokenInfo (TT::DOT_DOT, NoAttrib ()));
 		             }
@@ -389,11 +389,11 @@ void Lexer::CreateMachines ()
 			             if (line[0] == '\0')
 				             return LexerMachineReturn (1, TokenInfo (TT::END_FILE, NoAttrib ()));
 			             if (line[0] == '(')
-				             return LexerMachineReturn (1, TokenInfo (TT::PAREN_OPEN, NoAttrib ()));
+				             return LexerMachineReturn (1, TokenInfo (TT::P_O, NoAttrib ()));
 			             if (line[0] == ')')
-				             return LexerMachineReturn (1, TokenInfo (TT::PAREN_CLOSE, NoAttrib ()));
+				             return LexerMachineReturn (1, TokenInfo (TT::P_C, NoAttrib ()));
 			             if (line[0] == ';')
-				             return LexerMachineReturn (1, TokenInfo (TT::SEMICOLON, NoAttrib ()));
+				             return LexerMachineReturn (1, TokenInfo (TT::SEMIC, NoAttrib ()));
 			             if (line[0] == '.')
 				             return LexerMachineReturn (1, TokenInfo (TT::DOT, NoAttrib ()));
 			             if (line[0] == ',')
@@ -401,9 +401,9 @@ void Lexer::CreateMachines ()
 			             if (line[0] == ':')
 				             return LexerMachineReturn (1, TokenInfo (TT::COLON, NoAttrib ()));
 			             if (line[0] == '[')
-				             return LexerMachineReturn (1, TokenInfo (TT::BRACKET_OPEN, NoAttrib ()));
+				             return LexerMachineReturn (1, TokenInfo (TT::B_O, NoAttrib ()));
 			             if (line[0] == ']')
-				             return LexerMachineReturn (1, TokenInfo (TT::BRACKET_CLOSE, NoAttrib ()));
+				             return LexerMachineReturn (1, TokenInfo (TT::B_C, NoAttrib ()));
 						 if (line[0] == '*')
 							 return LexerMachineReturn(1, TokenInfo(TT::MULOP, MulOpEnum::mul));
 						 if (line[0] == '/')

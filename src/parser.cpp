@@ -229,18 +229,18 @@ void Parse (ParserContext &pc)
 
 RetType prog_stmt_program (ParserContext &pc)
 {
-	pc.Match (TT::PROGRAM);
+	pc.Match (TT::PROG);
 
 	ProcedureID cur = pc.tree.SetStartProcedure (GetSymbol (pc.Current ()));
 	if (cur == -1) { pc.LogErrorUniqueProcedure (pc.Current ()); }
 	pc.tree.Push (cur);
 	pc.Match (TT::ID);
 
-	pc.Match (TT::PAREN_OPEN);
+	pc.Match (TT::P_O);
 
 	IdentifierList (pc);
-	pc.Match (TT::PAREN_CLOSE);
-	pc.Match (TT::SEMICOLON);
+	pc.Match (TT::P_C);
+	pc.Match (TT::SEMIC);
 	ProgramStatementFactored (pc);
 }
 
@@ -250,10 +250,10 @@ RetType ProgramStatement (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROGRAM):
+		case (TT::PROG):
 			return prog_stmt_program (pc);
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROGRAM });
+			pc.LogErrorExpectedGot ({ TT::PROG });
 			pc.Synch ({ TT::END_FILE });
 	}
 	return ret;
@@ -268,7 +268,7 @@ RetType ProgramStatementFactored (ParserContext &pc)
 			Declarations (pc);
 			ProgramStatementFactoredFactored (pc);
 			break;
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramDeclarations (pc);
 			CompoundStatement (pc);
 			pc.Match (TT::DOT);
@@ -279,7 +279,7 @@ RetType ProgramStatementFactored (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VAR, TT::PROCEDURE, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::VAR, TT::PROC, TT::BEGIN });
 			pc.Synch ({ TT::END_FILE });
 	}
 	return ret;
@@ -290,7 +290,7 @@ RetType ProgramStatementFactoredFactored (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramDeclarations (pc);
 			CompoundStatement (pc);
 			pc.Match (TT::DOT);
@@ -301,7 +301,7 @@ RetType ProgramStatementFactoredFactored (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::PROC, TT::BEGIN });
 			pc.Synch ({ TT::END_FILE });
 	}
 	return ret;
@@ -326,7 +326,7 @@ RetType IdentifierList (ParserContext &pc)
 			return ident_list_id (pc);
 		default:
 			pc.LogErrorExpectedGot ({ TT::ID });
-			pc.Synch ({ TT::PAREN_CLOSE });
+			pc.Synch ({ TT::P_C });
 	}
 	return ret;
 }
@@ -347,11 +347,11 @@ RetType IdentifierListPrime (ParserContext &pc)
 	{
 		case (TT::COMMA):
 			return ident_list_prime (pc);
-		case (TT::PAREN_CLOSE):
+		case (TT::P_C):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::COMMA, TT::PAREN_CLOSE });
-			pc.Synch ({ TT::PAREN_CLOSE });
+			pc.LogErrorExpectedGot ({ TT::COMMA, TT::P_C });
+			pc.Synch ({ TT::P_C });
 	}
 	return ret;
 	// e-prod
@@ -371,7 +371,7 @@ RetType decls (ParserContext &pc)
 		if (exists) { pc.LogErrorIdentifierScope (tid); }
 	}
 
-	pc.Match (TT::SEMICOLON);
+	pc.Match (TT::SEMIC);
 	return DeclarationsPrime (pc);
 }
 
@@ -386,7 +386,7 @@ RetType Declarations (ParserContext &pc)
 		default:
 			pc.LogErrorExpectedGot ({ TT::VAR });
 
-			pc.Synch ({ TT::PROCEDURE, TT::BEGIN });
+			pc.Synch ({ TT::PROC, TT::BEGIN });
 	}
 	return ret;
 }
@@ -403,7 +403,7 @@ RetType decls_prime (ParserContext &pc)
 		auto exists = pc.tree.AddVariable (GetSymbol (tid), tt, false);
 		if (exists) { pc.LogErrorUniqueIdentifier (tid); }
 	}
-	pc.Match (TT::SEMICOLON);
+	pc.Match (TT::SEMIC);
 	DeclarationsPrime (pc);
 }
 
@@ -415,12 +415,12 @@ RetType DeclarationsPrime (ParserContext &pc)
 	{
 		case (TT::VAR):
 			return decls_prime (pc);
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 		case (TT::BEGIN):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE, TT::BEGIN, TT::VAR });
-			pc.Synch ({ TT::PROCEDURE, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::PROC, TT::BEGIN, TT::VAR });
+			pc.Synch ({ TT::PROC, TT::BEGIN });
 	}
 	return ret;
 	// e-prod
@@ -430,7 +430,7 @@ RetType type_array (ParserContext &pc)
 {
 	RetType ret = RT_none;
 	pc.Match (TT::ARRAY);
-	pc.Match (TT::BRACKET_OPEN);
+	pc.Match (TT::B_O);
 	auto ts = pc.Current ();
 	if (std::get<NumType> (ts.attrib).val.index () != 0)
 	{
@@ -447,7 +447,7 @@ RetType type_array (ParserContext &pc)
 		pc.LogErrorSem ("Array left bound not an int");
 	}
 	pc.Match (TT::NUM);
-	pc.Match (TT::BRACKET_CLOSE);
+	pc.Match (TT::B_C);
 	pc.Match (TT::OF);
 	auto t = StandardType (pc);
 	if (ret != RT_err)
@@ -476,13 +476,13 @@ RetType Type (ParserContext &pc)
 	{
 		case (TT::ARRAY):
 			return type_array (pc);
-		case (TT::STANDARD_TYPE):
+		case (TT::STD_T):
 			return StandardType (pc);
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::ARRAY, TT::STANDARD_TYPE });
-			pc.Synch ({ TT::PAREN_CLOSE, TT::SEMICOLON });
+			pc.LogErrorExpectedGot ({ TT::ARRAY, TT::STD_T });
+			pc.Synch ({ TT::P_C, TT::SEMIC });
 			return RT_err;
 	}
 	return ret;
@@ -490,7 +490,7 @@ RetType Type (ParserContext &pc)
 
 RetType std_type (ParserContext &pc)
 {
-	auto t = pc.Match (TT::STANDARD_TYPE);
+	auto t = pc.Match (TT::STD_T);
 	switch (std::get<StandardTypeEnum> (t.attrib))
 	{
 		case (StandardTypeEnum::integer):
@@ -511,11 +511,11 @@ RetType StandardType (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::STANDARD_TYPE):
+		case (TT::STD_T):
 			return std_type (pc);
 		default:
-			pc.LogErrorExpectedGot ({ TT::STANDARD_TYPE });
-			pc.Synch ({ TT::PAREN_CLOSE, TT::SEMICOLON });
+			pc.LogErrorExpectedGot ({ TT::STD_T });
+			pc.Synch ({ TT::P_C, TT::SEMIC });
 			return RT_err;
 	}
 	return ret;
@@ -526,14 +526,14 @@ RetType SubprogramDeclarations (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramDeclaration (pc);
-			pc.Match (TT::SEMICOLON);
+			pc.Match (TT::SEMIC);
 			SubprogramDeclarationsPrime (pc);
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE });
+			pc.LogErrorExpectedGot ({ TT::PROC });
 
 			pc.Synch ({ TT::BEGIN });
 	}
@@ -545,15 +545,15 @@ RetType SubprogramDeclarationsPrime (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramDeclaration (pc);
-			pc.Match (TT::SEMICOLON);
+			pc.Match (TT::SEMIC);
 			SubprogramDeclarationsPrime (pc);
 			break;
 		case (TT::BEGIN):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::PROC, TT::BEGIN });
 			pc.Synch ({ TT::BEGIN });
 	}
 	return ret;
@@ -565,15 +565,15 @@ RetType SubprogramDeclaration (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramHead (pc);
 			SubprogramDeclarationFactored (pc);
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE });
+			pc.LogErrorExpectedGot ({ TT::PROC });
 
-			pc.Synch ({ TT::SEMICOLON });
+			pc.Synch ({ TT::SEMIC });
 	}
 	return ret;
 }
@@ -587,7 +587,7 @@ RetType SubprogramDeclarationFactored (ParserContext &pc)
 			Declarations (pc);
 			SubprogramDeclarationFactoredFactored (pc);
 			break;
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramDeclarations (pc);
 			CompoundStatement (pc);
 			break;
@@ -596,8 +596,8 @@ RetType SubprogramDeclarationFactored (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VAR, TT::PROCEDURE, TT::BEGIN });
-			pc.Synch ({ TT::SEMICOLON });
+			pc.LogErrorExpectedGot ({ TT::VAR, TT::PROC, TT::BEGIN });
+			pc.Synch ({ TT::SEMIC });
 	}
 	return ret;
 }
@@ -607,7 +607,7 @@ RetType SubprogramDeclarationFactoredFactored (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			SubprogramDeclarations (pc);
 			CompoundStatement (pc);
 			break;
@@ -616,15 +616,15 @@ RetType SubprogramDeclarationFactoredFactored (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE, TT::BEGIN });
-			pc.Synch ({ TT::SEMICOLON });
+			pc.LogErrorExpectedGot ({ TT::PROC, TT::BEGIN });
+			pc.Synch ({ TT::SEMIC });
 	}
 	return ret;
 }
 
 RetType sub_prog_head_procedure (ParserContext &pc)
 {
-	pc.Match (TT::PROCEDURE);
+	pc.Match (TT::PROC);
 	ProcedureID cur = pc.tree.AddSubProcedure (GetSymbol (pc.Current ()));
 	if (cur == -1) { pc.LogErrorUniqueProcedure (pc.Current ()); }
 	pc.Match (TT::ID);
@@ -639,12 +639,12 @@ RetType SubprogramHead (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PROCEDURE):
+		case (TT::PROC):
 			return sub_prog_head_procedure (pc);
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE });
-			pc.Synch ({ TT::PROCEDURE, TT::VAR, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::PROC });
+			pc.Synch ({ TT::PROC, TT::VAR, TT::BEGIN });
 	}
 	return ret;
 }
@@ -654,17 +654,17 @@ RetType SubprogramHeadFactored (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PAREN_OPEN):
+		case (TT::P_O):
 			Arguments (pc);
-			pc.Match (TT::SEMICOLON);
+			pc.Match (TT::SEMIC);
 			break;
-		case (TT::SEMICOLON):
-			pc.Match (TT::SEMICOLON);
+		case (TT::SEMIC):
+			pc.Match (TT::SEMIC);
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::SEMICOLON, TT::PAREN_OPEN });
-			pc.Synch ({ TT::VAR, TT::BEGIN, TT::PROCEDURE });
+			pc.LogErrorExpectedGot ({ TT::SEMIC, TT::P_O });
+			pc.Synch ({ TT::VAR, TT::BEGIN, TT::PROC });
 	}
 	return ret;
 }
@@ -674,15 +674,15 @@ RetType Arguments (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::PAREN_OPEN):
-			pc.Match (TT::PAREN_OPEN);
+		case (TT::P_O):
+			pc.Match (TT::P_O);
 			ParameterList (pc);
-			pc.Match (TT::PAREN_CLOSE);
+			pc.Match (TT::P_C);
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::PAREN_OPEN });
-			pc.Synch ({ TT::SEMICOLON });
+			pc.LogErrorExpectedGot ({ TT::P_O });
+			pc.Synch ({ TT::SEMIC });
 	}
 	return ret;
 }
@@ -712,13 +712,13 @@ RetType ParameterList (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot ({ TT::ID });
-			pc.Synch ({ TT::PAREN_CLOSE });
+			pc.Synch ({ TT::P_C });
 	}
 	return ret;
 }
 RetType param_list_prime_id (ParserContext &pc)
 {
-	pc.Match (TT::SEMICOLON);
+	pc.Match (TT::SEMIC);
 	auto tid = pc.Current ();
 	pc.Match (TT::ID);
 	pc.Match (TT::COLON);
@@ -736,13 +736,13 @@ RetType ParameterListPrime (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::SEMICOLON):
+		case (TT::SEMIC):
 			return param_list_prime_id (pc);
-		case (TT::PAREN_CLOSE):
+		case (TT::P_C):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::SEMICOLON, TT::PAREN_CLOSE });
-			pc.Synch ({ TT::PAREN_CLOSE });
+			pc.LogErrorExpectedGot ({ TT::SEMIC, TT::P_C });
+			pc.Synch ({ TT::P_C });
 	}
 	return ret;
 	// e-prod
@@ -761,7 +761,7 @@ RetType CompoundStatement (ParserContext &pc)
 		default:
 			pc.LogErrorExpectedGot ({ TT::BEGIN });
 
-			pc.Synch ({ TT::SEMICOLON, TT::DOT });
+			pc.Synch ({ TT::SEMIC, TT::DOT });
 	}
 	return ret;
 }
@@ -787,7 +787,7 @@ RetType CompoundStatementFactored (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot ({ TT::END, TT::BEGIN, TT::ID, TT::CALL, TT::IF, TT::WHILE });
-			pc.Synch ({ TT::SEMICOLON, TT::DOT });
+			pc.Synch ({ TT::SEMIC, TT::DOT });
 	}
 	return ret;
 }
@@ -839,15 +839,15 @@ RetType StatementListPrime (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::SEMICOLON):
-			pc.Match (TT::SEMICOLON);
+		case (TT::SEMIC):
+			pc.Match (TT::SEMIC);
 			Statement (pc);
 			StatementListPrime (pc);
 			break;
 		case (TT::END):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::END, TT::SEMICOLON });
+			pc.LogErrorExpectedGot ({ TT::END, TT::SEMIC });
 			pc.Synch ({ TT::END });
 			return RT_err;
 	}
@@ -858,7 +858,7 @@ RetType StatementListPrime (ParserContext &pc)
 RetType stmt_id (ParserContext &pc)
 {
 	auto ret = Variable (pc);
-	pc.Match (TT::ASSIGNOP);
+	pc.Match (TT::A_OP);
 	auto eret = Expression (pc, ret);
 
 	if (ret != eret)
@@ -912,7 +912,7 @@ RetType Statement (ParserContext &pc)
 			return stmt_call (pc);
 		default:
 			pc.LogErrorExpectedGot ({ TT::ID, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
-			pc.Synch ({ TT::SEMICOLON, TT::ELSE, TT::END });
+			pc.Synch ({ TT::SEMIC, TT::ELSE, TT::END });
 			return RT_err;
 	}
 	return ret;
@@ -938,7 +938,7 @@ RetType StatementFactoredBegin (ParserContext &pc)
 			break;
 		default:
 			pc.LogErrorExpectedGot ({ TT::END, TT::BEGIN, TT::ID, TT::CALL, TT::IF, TT::WHILE });
-			pc.Synch ({ TT::SEMICOLON, TT::ELSE, TT::END });
+			pc.Synch ({ TT::SEMIC, TT::ELSE, TT::END });
 			return RT_err;
 	}
 	return ret;
@@ -953,27 +953,26 @@ RetType StatementFactoredElse (ParserContext &pc)
 			pc.Match (TT::ELSE);
 			Statement (pc);
 			break;
-		case (TT::SEMICOLON):
+		case (TT::SEMIC):
 		case (TT::END):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::END, TT::ELSE, TT::SEMICOLON });
-			pc.Synch ({ TT::SEMICOLON, TT::ELSE, TT::END });
+			pc.LogErrorExpectedGot ({ TT::END, TT::ELSE, TT::SEMIC });
+			pc.Synch ({ TT::SEMIC, TT::ELSE, TT::END });
 			return RT_err;
 	}
 	return ret;
 	// e-prod
 }
 
-RetType var_id(ParserContext &pc)
+RetType var_id (ParserContext &pc)
 {
-	auto exists = pc.tree.CheckVariable(GetSymbol(pc.Current()));
-	if (!exists.has_value()) { pc.LogErrorIdentifierScope(pc.Current()); }
-	pc.Match(TT::ID);
-	auto ret = VariableFactored(pc);
+	auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
+	if (!exists.has_value ()) { pc.LogErrorIdentifierScope (pc.Current ()); }
+	pc.Match (TT::ID);
+	auto ret = VariableFactored (pc);
 	if (ret == RT_int) {}
 	return RT_none;
-
 }
 RetType Variable (ParserContext &pc)
 {
@@ -982,23 +981,23 @@ RetType Variable (ParserContext &pc)
 	switch (pc.Current ().type)
 	{
 		case (TT::ID):
-			return var_id(pc);
+			return var_id (pc);
 
 		default:
 			pc.LogErrorExpectedGot ({ TT::ID });
-			pc.Synch ({ TT::ASSIGNOP });
+			pc.Synch ({ TT::A_OP });
 			return RT_err;
 	}
 	return ret;
 }
-RetType var_factored_bracket_open(ParserContext &pc)
+RetType var_factored_bracket_open (ParserContext &pc)
 {
-	pc.Match(TT::BRACKET_OPEN);
-	auto rt = Expression(pc, RT_none);
-	pc.Match(TT::BRACKET_CLOSE);
+	pc.Match (TT::B_O);
+	auto rt = Expression (pc, RT_none);
+	pc.Match (TT::B_C);
 	if (rt != RT_int)
 	{
-		pc.LogErrorSem("Array index must be of type int, not " + rt.to_string());
+		pc.LogErrorSem ("Array index must be of type int, not " + rt.to_string ());
 		return RT_err;
 	}
 	return RT_int;
@@ -1010,32 +1009,32 @@ RetType VariableFactored (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::BRACKET_OPEN):
-			return var_factored_bracket_open(pc);
-		case (TT::ASSIGNOP):
+		case (TT::B_O):
+			return var_factored_bracket_open (pc);
+		case (TT::A_OP):
 			return RT_none;
 		default:
-			pc.LogErrorExpectedGot ({ TT::BRACKET_OPEN, TT::ASSIGNOP });
-			pc.Synch ({ TT::ASSIGNOP });
+			pc.LogErrorExpectedGot ({ TT::B_O, TT::A_OP });
+			pc.Synch ({ TT::A_OP });
 			return RT_err;
 	}
 	return ret;
 	// e-prod
 }
-RetType proc_stmt_call(ParserContext &pc)
+RetType proc_stmt_call (ParserContext &pc)
 {
 	RetType ret = RT_none;
-	pc.Match(TT::CALL);
-	bool exists = pc.tree.CheckProcedure(GetSymbol(pc.Current()));
+	pc.Match (TT::CALL);
+	bool exists = pc.tree.CheckProcedure (GetSymbol (pc.Current ()));
 	if (!exists)
 	{
 		ret = RT_err;
-		pc.LogErrorProcedureScope(pc.Current());
+		pc.LogErrorProcedureScope (pc.Current ());
 	}
-	auto tid = GetSymbol(pc.Current());
-	pc.Match(TT::ID);
+	auto tid = GetSymbol (pc.Current ());
+	pc.Match (TT::ID);
 
-	return ProcedureStatmentFactored(pc, tid, ret);
+	return ProcedureStatmentFactored (pc, tid, ret);
 }
 RetType ProcedureStatement (ParserContext &pc)
 {
@@ -1044,50 +1043,47 @@ RetType ProcedureStatement (ParserContext &pc)
 	switch (pc.Current ().type)
 	{
 		case (TT::CALL):
-			return proc_stmt_call(pc);
+			return proc_stmt_call (pc);
 
 		default:
 			pc.LogErrorExpectedGot ({ TT::CALL });
-			pc.Synch ({ TT::SEMICOLON, TT::ELSE, TT::END });
+			pc.Synch ({ TT::SEMIC, TT::ELSE, TT::END });
 			return RT_err;
 	}
 	return ret;
 }
-RetType proc_stmt_factored_paren_open(ParserContext &pc, SymbolID id, RetType in)
+RetType proc_stmt_factored_paren_open (ParserContext &pc, SymbolID id, RetType in)
 {
-	pc.Match(TT::PAREN_OPEN);
+	pc.Match (TT::P_O);
 	std::vector<RetType> expr_list;
-	auto ret = ExpressionList(pc, expr_list, in);
-	auto param_list = pc.tree.SubProcedureType(id);
+	auto ret = ExpressionList (pc, expr_list, in);
+	auto param_list = pc.tree.SubProcedureType (id);
 	if (in != RT_err)
 	{
 		bool isEqual = true;
-		for (int i = 0; i < expr_list.size(); i++)
+		for (int i = 0; i < expr_list.size (); i++)
 		{
-			if (param_list.size() <= i) { isEqual = false; }
-			else if (param_list.at(i) != expr_list.at(i))
+			if (param_list.size () <= i) { isEqual = false; }
+			else if (param_list.at (i) != expr_list.at (i))
 			{
-				pc.LogErrorSem("Argument " + std::to_string(i) + " is type "
-					+ expr_list.at(i).to_string() + " when it should be of type "
-					+ param_list.at(i).to_string());
+				pc.LogErrorSem ("Argument " + std::to_string (i) + " is type " + expr_list.at (i).to_string ()
+				                + " when it should be of type " + param_list.at (i).to_string ());
 				isEqual = false;
 			}
 		}
-		if (param_list.size() > expr_list.size())
+		if (param_list.size () > expr_list.size ())
 		{
-			pc.LogErrorSem("The call to procedure \"" + pc.SymbolName(id) + "\" has "
-				+ std::to_string(param_list.size() - expr_list.size())
-				+ " to few arguments");
+			pc.LogErrorSem ("The call to procedure \"" + pc.SymbolName (id) + "\" has "
+			                + std::to_string (param_list.size () - expr_list.size ()) + " to few arguments");
 		}
-		else if (param_list.size() < expr_list.size())
+		else if (param_list.size () < expr_list.size ())
 		{
-			pc.LogErrorSem("The call to procedure \"" + pc.SymbolName(id) + "\" has "
-				+ std::to_string(expr_list.size() - param_list.size())
-				+ " to many arguments");
+			pc.LogErrorSem ("The call to procedure \"" + pc.SymbolName (id) + "\" has "
+			                + std::to_string (expr_list.size () - param_list.size ()) + " to many arguments");
 		}
 		if (!isEqual) { ret = RT_err; }
 	}
-	pc.Match(TT::PAREN_CLOSE);
+	pc.Match (TT::P_C);
 	return ret;
 }
 
@@ -1096,15 +1092,15 @@ RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id, RetType in)
 	RetType ret = RT_none;
 	switch (pc.Current ().type)
 	{
-		case (TT::PAREN_OPEN):
-			return proc_stmt_factored_paren_open(pc, id, in);
-		case (TT::SEMICOLON):
+		case (TT::P_O):
+			return proc_stmt_factored_paren_open (pc, id, in);
+		case (TT::SEMIC):
 		case (TT::ELSE):
 		case (TT::END):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::PAREN_OPEN, TT::SEMICOLON, TT::ELSE });
-			pc.Synch ({ TT::ELSE, TT::SEMICOLON, TT::END });
+			pc.LogErrorExpectedGot ({ TT::P_O, TT::SEMIC, TT::ELSE });
+			pc.Synch ({ TT::ELSE, TT::SEMIC, TT::END });
 			return RT_err;
 	}
 	// e-prod
@@ -1117,7 +1113,7 @@ RetType ExpressionList (ParserContext &pc, std::vector<RetType> &expr_list, RetT
 	switch (pc.Current ().type)
 	{
 		case (TT::ID):
-		case (TT::PAREN_OPEN):
+		case (TT::P_O):
 		case (TT::NUM):
 		case (TT::NOT):
 		case (TT::SIGN):
@@ -1127,8 +1123,8 @@ RetType ExpressionList (ParserContext &pc, std::vector<RetType> &expr_list, RetT
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT, TT::SIGN });
-			pc.Synch ({ TT::PAREN_CLOSE });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::P_O, TT::NUM, TT::NOT, TT::SIGN });
+			pc.Synch ({ TT::P_C });
 			return RT_err;
 	}
 	return ret;
@@ -1146,20 +1142,20 @@ RetType ExpressionListPrime (ParserContext &pc, std::vector<RetType> &expr_list,
 			ExpressionListPrime (pc, expr_list, in);
 			break;
 
-		case (TT::PAREN_CLOSE):
+		case (TT::P_C):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::PAREN_CLOSE, TT::COMMA });
-			pc.Synch ({ TT::PAREN_CLOSE });
+			pc.LogErrorExpectedGot ({ TT::P_C, TT::COMMA });
+			pc.Synch ({ TT::P_C });
 			return RT_err;
 	}
 	return ret;
 	// e -prod
 }
-RetType expr(ParserContext &pc, RetType in)
+RetType expr (ParserContext &pc, RetType in)
 {
-	auto sr = SimpleExpression(pc, in);
-	auto er = ExpressionFactored(pc, sr);
+	auto sr = SimpleExpression (pc, in);
+	auto er = ExpressionFactored (pc, sr);
 	if (sr == RT_err || er == RT_err)
 	{
 		return RT_err; // propagate
@@ -1172,7 +1168,7 @@ RetType expr(ParserContext &pc, RetType in)
 	{
 		if (sr != er)
 		{
-			pc.LogErrorSem("Can't compare types" + sr.to_string() + "and " + er.to_string());
+			pc.LogErrorSem ("Can't compare types" + sr.to_string () + "and " + er.to_string ());
 			return RT_err; // relop in expr_factored
 		}
 		else
@@ -1188,22 +1184,22 @@ RetType Expression (ParserContext &pc, RetType in)
 	switch (pc.Current ().type)
 	{
 		case (TT::ID):
-		case (TT::PAREN_OPEN):
+		case (TT::P_O):
 		case (TT::NUM):
 		case (TT::NOT):
 		case (TT::SIGN):
-			return expr(pc, in);
+			return expr (pc, in);
 		default:
-			pc.LogErrorExpectedGot ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT, TT::SIGN });
-			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::P_O, TT::NUM, TT::NOT, TT::SIGN });
+			pc.Synch ({ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
 }
-RetType expr_factored_relop(ParserContext &pc, RetType in) {
-	pc.Match(TT::RELOP);
-	auto ser = SimpleExpression(pc, in);
+RetType expr_factored_relop (ParserContext &pc, RetType in)
+{
+	pc.Match (TT::RELOP);
+	auto ser = SimpleExpression (pc, in);
 	return ser;
 }
 
@@ -1214,10 +1210,10 @@ RetType ExpressionFactored (ParserContext &pc, RetType in)
 	switch (pc.Current ().type)
 	{
 		case (TT::RELOP):
-			return expr_factored_relop(pc,in);
-		case (TT::PAREN_CLOSE):
-		case (TT::SEMICOLON):
-		case (TT::BRACKET_CLOSE):
+			return expr_factored_relop (pc, in);
+		case (TT::P_C):
+		case (TT::SEMIC):
+		case (TT::B_C):
 		case (TT::COMMA):
 		case (TT::THEN):
 		case (TT::ELSE):
@@ -1227,30 +1223,29 @@ RetType ExpressionFactored (ParserContext &pc, RetType in)
 			break;
 		default:
 			pc.LogErrorExpectedGot (
-			{ TT::RELOP, TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::THEN, TT::ELSE, TT::DO, TT::END });
-			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			{ TT::RELOP, TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			pc.Synch ({ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
 	// e-prod
 }
-RetType simp_expr(ParserContext &pc, RetType in)
+RetType simp_expr (ParserContext &pc, RetType in)
 {
-	auto tr = Term(pc, in);
-	auto sr = SimpleExpressionPrime(pc, tr);
+	auto tr = Term (pc, in);
+	auto sr = SimpleExpressionPrime (pc, tr);
 	if (sr == RT_none) { return tr; }
 	if (tr != sr) {}
-	return RT_none; //TODO
+	return RT_none; // TODO
 }
-RetType simp_expr_sign(ParserContext &pc, RetType in)
+RetType simp_expr_sign (ParserContext &pc, RetType in)
 {
-	pc.Match(TT::SIGN);
-	auto tr = Term(pc, in);
-	auto sr = SimpleExpressionPrime(pc, RT_none);
+	pc.Match (TT::SIGN);
+	auto tr = Term (pc, in);
+	auto sr = SimpleExpressionPrime (pc, RT_none);
 	if (sr == RT_none) { return tr; }
 
-	return RT_none;//TODO
+	return RT_none; // TODO
 }
 RetType SimpleExpression (ParserContext &pc, RetType in)
 {
@@ -1259,45 +1254,43 @@ RetType SimpleExpression (ParserContext &pc, RetType in)
 	switch (pc.Current ().type)
 	{
 		case (TT::ID):
-		case (TT::PAREN_OPEN):
+		case (TT::P_O):
 		case (TT::NUM):
 		case (TT::NOT):
-			return simp_expr(pc, in);
+			return simp_expr (pc, in);
 		case (TT::SIGN):
-			return simp_expr_sign(pc, in);
+			return simp_expr_sign (pc, in);
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT, TT::SIGN });
-			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::P_O, TT::NUM, TT::NOT, TT::SIGN });
+			pc.Synch ({ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
 }
-RetType simp_expr_prime_add(ParserContext &pc, RetType in)
+RetType simp_expr_prime_add (ParserContext &pc, RetType in)
 {
 	RetType ret = RT_none;
 
 	if (in == RT_err) { ret = RT_err; }
-	switch (pc.Current().type)
+	switch (pc.Current ().type)
 	{
 		case (TT::ADDOP):
-			pc.Match(TT::ADDOP);
+			pc.Match (TT::ADDOP);
 			break;
 		case (TT::SIGN):
-			pc.Match(TT::SIGN);
+			pc.Match (TT::SIGN);
 			break;
 	}
 
-	auto tr = Term(pc, in);
+	auto tr = Term (pc, in);
 	if (tr == RT_int || tr == RT_real) {}
-	auto sr = SimpleExpressionPrime(pc, in);
+	auto sr = SimpleExpressionPrime (pc, in);
 	if (sr == RT_none)
 	{
 		if (tr != sr)
 		{
-			pc.LogErrorSem(
-				"Cannot add values of type " + sr.to_string() + " and " + tr.to_string());
+			pc.LogErrorSem ("Cannot add values of type " + sr.to_string () + " and " + tr.to_string ());
 			return RT_err;
 		}
 	}
@@ -1312,10 +1305,10 @@ RetType SimpleExpressionPrime (ParserContext &pc, RetType in)
 	{
 		case (TT::SIGN):
 		case (TT::ADDOP):
-			return simp_expr_prime_add(pc,in);
-		case (TT::PAREN_CLOSE):
-		case (TT::SEMICOLON):
-		case (TT::BRACKET_CLOSE):
+			return simp_expr_prime_add (pc, in);
+		case (TT::P_C):
+		case (TT::SEMIC):
+		case (TT::B_C):
 		case (TT::COMMA):
 		case (TT::RELOP):
 		case (TT::THEN):
@@ -1326,9 +1319,8 @@ RetType SimpleExpressionPrime (ParserContext &pc, RetType in)
 			break;
 		default:
 			pc.LogErrorExpectedGot (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
-			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			{ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			pc.Synch ({ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	// e -prod
@@ -1342,7 +1334,7 @@ RetType Term (ParserContext &pc, RetType in)
 	{
 		case (TT::ID):
 		case (TT::NUM):
-		case (TT::PAREN_OPEN):
+		case (TT::P_O):
 		case (TT::NOT):
 			ret = Factor (pc, in);
 			ret = TermPrime (pc, ret);
@@ -1350,9 +1342,9 @@ RetType Term (ParserContext &pc, RetType in)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::P_O, TT::NUM, TT::NOT });
 			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::RELOP, TT::ADDOP, TT::SIGN, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			{ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::RELOP, TT::ADDOP, TT::SIGN, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
@@ -1368,14 +1360,14 @@ RetType TermPrime (ParserContext &pc, RetType in)
 			ret = Factor (pc, in);
 
 			ret = TermPrime (pc, ret);
-		
+
 			break;
 		case (TT::SIGN):
 		case (TT::ADDOP):
 		case (TT::RELOP):
-		case (TT::PAREN_CLOSE):
-		case (TT::SEMICOLON):
-		case (TT::BRACKET_CLOSE):
+		case (TT::P_C):
+		case (TT::SEMIC):
+		case (TT::B_C):
 		case (TT::COMMA):
 		case (TT::THEN):
 		case (TT::ELSE):
@@ -1383,50 +1375,71 @@ RetType TermPrime (ParserContext &pc, RetType in)
 		case (TT::END):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::PAREN_CLOSE,
-			TT::SEMICOLON,
-			TT::BRACKET_CLOSE,
-			TT::COMMA,
-			TT::MULOP,
-			TT::SIGN,
-			TT::ADDOP,
-			TT::RELOP,
-			TT::THEN,
-			TT::ELSE,
-			TT::DO,
-			TT::END });
+			pc.LogErrorExpectedGot (
+			{ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::MULOP, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			pc.Synch (
-			{ TT::PAREN_CLOSE, TT::SEMICOLON, TT::BRACKET_CLOSE, TT::COMMA, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::END, TT::DO });
+			{ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::SIGN, TT::ADDOP, TT::RELOP, TT::THEN, TT::ELSE, TT::END, TT::DO });
 			return RT_err;
 	}
 	return ret;
 	// e -prod
 }
-RetType factor_id(ParserContext &pc, RetType in)
+RetType factor_id (ParserContext &pc, RetType in)
 {
-	auto exists = pc.tree.CheckVariable(GetSymbol(pc.Current()));
-	if (!exists.has_value())
+	auto exists = pc.tree.CheckVariable (GetSymbol (pc.Current ()));
+	if (!exists.has_value ())
 	{
-		pc.LogErrorIdentifierScope(pc.Current());
+		pc.LogErrorIdentifierScope (pc.Current ());
 
-		pc.Match(TT::ID);
-		return FactorPrime(pc, RT_err);
+		pc.Match (TT::ID);
+		return FactorPrime (pc, RT_err);
 	}
-	else if (exists.value() == RT_none)
+	else if (exists.value () == RT_none)
 	{
-		pc.LogErrorSem(std::string("Variable ")
-			+ pc.SymbolName(GetSymbol(pc.Current())) + " has invalid type");
-		pc.Match(TT::ID);
-		auto ft = FactorPrime(pc, exists.value());
+		pc.LogErrorSem (std::string ("Variable ") + pc.SymbolName (GetSymbol (pc.Current ())) + " has invalid type");
+		pc.Match (TT::ID);
+		auto ft = FactorPrime (pc, exists.value ());
 		return RT_err;
 	}
 	else
 	{
-		pc.Match(TT::ID);
-		auto ft = FactorPrime(pc, exists.value());
+		pc.Match (TT::ID);
+		auto ft = FactorPrime (pc, exists.value ());
 		if (ft == RT_none) { return ft; }
 		else
 			return RT_err;
+	}
+}
+RetType factor_num (ParserContext &pc, RetType in)
+{
+	auto tid = pc.Match (TT::NUM);
+	if (std::get<NumType> (tid.attrib).val.index () == 0)
+		return RT_int;
+	else if (std::get<NumType> (tid.attrib).val.index () == 1)
+		return RT_real;
+	else
+		return RT_err;
+}
+RetType factor_paren_open (ParserContext &pc, RetType in)
+{
+	pc.Match (TT::P_O);
+	auto ret = Expression (pc, in);
+	pc.Match (TT::P_C);
+	return ret;
+}
+RetType factor_not (ParserContext &pc, RetType in)
+{
+	pc.Match (TT::NOT);
+	auto ret = Factor (pc, in);
+	if (ret == RT_bool) { return RT_bool; }
+	else if (ret == RT_err)
+	{
+		return RT_err;
+	}
+	else
+	{
+		pc.LogErrorSem ("Cannot negate a non-boolean type, not " + ret.to_string ());
+		return RT_err;
 	}
 }
 RetType Factor (ParserContext &pc, RetType in)
@@ -1436,76 +1449,41 @@ RetType Factor (ParserContext &pc, RetType in)
 	switch (pc.Current ().type)
 	{
 		case (TT::ID):
-			return factor_id(pc,in);
+			return factor_id (pc, in);
 		case (TT::NUM):
-			return [&]() -> RetType {
-				auto tid = pc.Match (TT::NUM);
-				if (std::get<NumType> (tid.attrib).val.index () == 0)
-					return RT_int;
-				else if (std::get<NumType> (tid.attrib).val.index () == 1)
-					return RT_real;
-				else
-					return RT_err;
-			}();
-			break;
-		case (TT::PAREN_OPEN):
-			pc.Match (TT::PAREN_OPEN);
-			ret = Expression (pc, in);
-			pc.Match (TT::PAREN_CLOSE);
-			return ret;
-			break;
+			return factor_num (pc, in);
+		case (TT::P_O):
+			return factor_paren_open (pc, in);
 		case (TT::NOT):
-			pc.Match (TT::NOT);
-			ret = Factor (pc, in);
-			if (ret == RT_bool) { return RT_bool; }
-			else if (ret == RT_err)
-			{
-				return RT_err;
-			}
-			else
-			{
-				pc.LogErrorSem ("Cannot negate a non-boolean type, not " + ret.to_string ());
-				return RT_err;
-			}
-			break;
+			return factor_not (pc, in);
 		default:
-			pc.LogErrorExpectedGot ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT });
-			pc.Synch ({ TT::PAREN_CLOSE,
-			TT::SEMICOLON,
-			TT::BRACKET_CLOSE,
-			TT::COMMA,
-			TT::RELOP,
-			TT::SIGN,
-			TT::ADDOP,
-			TT::MULOP,
-			TT::THEN,
-			TT::ELSE,
-			TT::DO,
-			TT::END });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::P_O, TT::NUM, TT::NOT });
+			pc.Synch (
+			{ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::RELOP, TT::SIGN, TT::ADDOP, TT::MULOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
 }
 
-RetType factor_prime_braket_open(ParserContext &pc, RetType in)
+RetType factor_prime_braket_open (ParserContext &pc, RetType in)
 {
-	pc.Match(TT::BRACKET_OPEN);
-	auto ret = Expression(pc, in);
+	pc.Match (TT::B_O);
+	auto ret = Expression (pc, in);
 	if (ret == RT_err)
 	{
-		pc.Match(TT::BRACKET_CLOSE);
+		pc.Match (TT::B_C);
 		return RT_err;
 	}
 	else if (ret == RT_int)
 	{
-		pc.Match(TT::BRACKET_CLOSE);
-		if (IsArrInt(in) || IsArrReal(in)) return RT_none;
+		pc.Match (TT::B_C);
+		if (IsArrInt (in) || IsArrReal (in)) return RT_none;
 		return RT_err;
 	}
 	else
 	{
-		pc.LogErrorSem("Array index must be of type int, not " + ret.to_string());
-		pc.Match(TT::BRACKET_CLOSE);
+		pc.LogErrorSem ("Array index must be of type int, not " + ret.to_string ());
+		pc.Match (TT::B_C);
 		return RT_err;
 	}
 }
@@ -1515,11 +1493,11 @@ RetType FactorPrime (ParserContext &pc, RetType in)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::BRACKET_OPEN):
-			return factor_prime_braket_open(pc, in);
-		case (TT::PAREN_CLOSE):
-		case (TT::SEMICOLON):
-		case (TT::BRACKET_CLOSE):
+		case (TT::B_O):
+			return factor_prime_braket_open (pc, in);
+		case (TT::P_C):
+		case (TT::SEMIC):
+		case (TT::B_C):
 		case (TT::COMMA):
 		case (TT::RELOP):
 		case (TT::SIGN):
@@ -1533,31 +1511,10 @@ RetType FactorPrime (ParserContext &pc, RetType in)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::BRACKET_OPEN,
-			TT::PAREN_CLOSE,
-			TT::SEMICOLON,
-			TT::BRACKET_CLOSE,
-			TT::COMMA,
-			TT::RELOP,
-			TT::SIGN,
-			TT::ADDOP,
-			TT::MULOP,
-			TT::THEN,
-			TT::ELSE,
-			TT::DO,
-			TT::END });
-			pc.Synch ({ TT::PAREN_CLOSE,
-			TT::SEMICOLON,
-			TT::BRACKET_CLOSE,
-			TT::COMMA,
-			TT::RELOP,
-			TT::SIGN,
-			TT::ADDOP,
-			TT::MULOP,
-			TT::THEN,
-			TT::ELSE,
-			TT::DO,
-			TT::END });
+			pc.LogErrorExpectedGot (
+			{ TT::B_O, TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::RELOP, TT::SIGN, TT::ADDOP, TT::MULOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
+			pc.Synch (
+			{ TT::P_C, TT::SEMIC, TT::B_C, TT::COMMA, TT::RELOP, TT::SIGN, TT::ADDOP, TT::MULOP, TT::THEN, TT::ELSE, TT::DO, TT::END });
 			return RT_err;
 	}
 	return ret;
@@ -1575,7 +1532,7 @@ RetType Sign (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot ({ TT::SIGN });
-			pc.Synch ({ TT::ID, TT::PAREN_OPEN, TT::NUM, TT::NOT });
+			pc.Synch ({ TT::ID, TT::P_O, TT::NUM, TT::NOT });
 			return RT_err;
 	}
 	return ret;
