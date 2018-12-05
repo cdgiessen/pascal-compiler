@@ -112,7 +112,6 @@ class ParserContext
 
 	void LogErrorSem (std::string msg);
 
-	void LogErrorProcedureScope (TokenInfo t);
 	void LogErrorUniqueProcedure (TokenInfo t);
 	void LogErrorIdentifierScope (TokenInfo t);
 	void LogErrorUniqueIdentifier (TokenInfo t);
@@ -173,5 +172,5 @@ namespace Parser
 	RetType TermPrime (ParserContext &pc, RetType in);
 	RetType Factor (ParserContext &pc, RetType in);
 	RetType FactorPrime (ParserContext &pc, RetType in);
-	RetType Sign (ParserContext &pc);
+	RetType Sign (ParserContext &pc, RetType in);
 };

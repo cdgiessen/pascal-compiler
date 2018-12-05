@@ -11,7 +11,7 @@ program example(input, output);
 	end;
 
 	procedure cdg(a: integer ; b: integer);
-		procedure in(a: integer ; b: integer);
+		procedure in1(a: integer ; b: integer);
 		  var x: real;
 			begin
 				if b <> 0 then call gcd(b, a mod b)
@@ -34,6 +34,11 @@ begin
 	x:= 1;
 	x:= 1 * 1 + 1 div 1 - 1;
 
-	if x > 5 and (x < 100 or (y[1] >= .0 and (not y[2] <= 100.0 ) ) ) then x := 5 else y[9] := y[0] ;
-	while  x <> 10 do x:= y[5] + 1
+	if (x >= 0) and ( x >= 0 )
+	then x:=1;
+
+	if (x > 5) and (x < 100) or	(y[1] >= .0) and not ( y[2] <= 100.0 )
+	then x := 5 
+	else y[9] := y[0];
+	while  x <> 10 do x:= z[5] + 1
 end.

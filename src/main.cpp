@@ -29,9 +29,9 @@ class Compiler
 int main (int argc, char *argv[])
 {
 	std::vector<std::string> file_list;
-	file_list.push_back("test_input/test_passing.txt");
+	//file_list.push_back("test_input/test_passing.txt");
 	//file_list.push_back ("test_input/test_some_errors.txt");
-	//file_list.push_back ("test_input/test_sem.txt");
+	file_list.push_back ("test_input/test_sem.txt");
 
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
 
