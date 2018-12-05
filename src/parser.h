@@ -32,7 +32,7 @@ struct RetType
 			int size = data >> 8;
 			return "arr_real;size=" + std::to_string (size);
 		}
-		return "";
+		return "NOT A TYPE!";
 	}
 };
 
@@ -160,7 +160,7 @@ namespace Parser
 	RetType StatementFactoredBegin (ParserContext &pc);
 	RetType StatementFactoredElse (ParserContext &pc);
 	RetType Variable (ParserContext &pc);
-	RetType VariableFactored (ParserContext &pc);
+	RetType VariableFactored (ParserContext &pc, RetType in);
 	RetType ProcedureStatement (ParserContext &pc);
 	RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id, RetType in);
 	RetType ExpressionList (ParserContext &pc, std::vector < RetType>& expr_list, RetType in);

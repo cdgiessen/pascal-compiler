@@ -376,7 +376,7 @@ void Lexer::CreateMachines ()
 		 return LexerMachineReturn (index, TokenInfo (TT::ID, SymbolType (loc)));
 	 } });
 
-	AddMachine ({ "Catch-all", 80, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
+	AddMachine ({ "Catch-all", 45, [](LexerContext &context, ProgramLine &line) -> std::optional<LexerMachineReturn> {
 		             if (line.size () >= 2)
 		             {
 			             if (line[0] == ':' && line[1] == '=')
@@ -427,7 +427,7 @@ void Lexer::CreateMachines ()
 			 i++;
 			 base_size++;
 		 }
-		 if (i == 0) return {};
+		 //if (i == 0) return {};
 
 		 if (i >= line.size () || line[i] != '.') return {};
 
@@ -523,7 +523,7 @@ void Lexer::CreateMachines ()
 			 i++;
 			 base_size++;
 		 }
-		 if (i == 0) return {};
+		 //if (i == 0) return {};
 
 		 if (i >= line.size () || line[i] != '.') return {};
 

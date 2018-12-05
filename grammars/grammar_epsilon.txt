@@ -89,6 +89,7 @@ TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin en
 
 20. factor ->
     id
+	id [ expression ]
     num
     ( expression )
     not factor

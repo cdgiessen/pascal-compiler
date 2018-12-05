@@ -149,10 +149,14 @@ TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin en
 19.0.4    e
 
 20. factor ->
-    id
+    id factor_prime
     num
     ( expression )
     not factor
+
+22. factor_prime ->	
+	[ expression ]
+	e 
 
 21. sign ->
     +

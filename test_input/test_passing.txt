@@ -14,11 +14,11 @@ program example(input, output);
 		procedure in(a: integer ; b: integer);
 		  var x: real;
 			begin
-				call gcd(b, a mod b)
+				if b <> 0 then call gcd(b, a mod b)
 			end;
 		procedure in2;
 			begin
-				if b = 0 then gcd := a
+				if b = 0 then z := z
 			end;
 		procedure in3(a : real);
 			begin
@@ -26,13 +26,14 @@ program example(input, output);
 	begin
 		call in1(a, b);
 		call in2;
-		call in3(0)
+		call in3(.0)
 	end;
 
 begin
+	call gcd(1, 0);
 	x:= 1;
 	x:= 1 * 1 + 1 div 1 - 1;
 
-	if x > 5 and (x < 100 or (y >= 0 and not (y <= 100 ) ) ) then x:= 5 else x:= x ;
-	while  x <> 10 do x:= x + 1
+	if x > 5 and (x < 100 or (y[1] >= .0 and (not y[2] <= 100.0 ) ) ) then x := 5 else y[9] := y[0] ;
+	while  x <> 10 do x:= y[5] + 1
 end.

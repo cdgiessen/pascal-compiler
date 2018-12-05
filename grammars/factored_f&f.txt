@@ -71,10 +71,14 @@ TOKENS program id ( ) ; . var : array [ ] num of integer real procedure begin en
 	(20.14)	- 
 
 (21) factor ->	{Firsts: 'id', '(', 'num', 'not'}	{Follows: ')', ';', ']', 'end', ',', 'relop', 'addop', 'mulop', 'then', 'else', 'do'}
-	(21.9)	id 
+	(21.9)	id factor_p
 	(21.10)	num 
 	(21.11)	( expression ) 
 	(21.12)	not factor 
+
+(41) factor' ->	{Firsts: {'[', e};	{Follows: {')', ';', ']', 'end', ',', 'relop', 'addop', 'mulop', 'then', 'else', 'do'}}
+	(41.0) factor' -> '[' expr ']'
+	(41.1) factor' -> e 
 
 (22) identifier_list_p ->	{Firsts: ',', e}	{Follows: ')'}
 	(22.15)	e 

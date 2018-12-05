@@ -6,7 +6,7 @@
 class Compiler
 {
 	public:
-	Compiler () : logger (), lexer (logger), parser (logger) {}
+	Compiler () : logger (), lexer (logger) {}
 
 	void Compile (CodeSource &source)
 	{
@@ -15,7 +15,7 @@ class Compiler
 		TokenStream ts (lexer, context, source);
 
 		ParserContext ct (context, ts, logger);
-		parser.Parse (ct);
+		Parser::Parse (ct);
 
 		OutputFileHandle sym ("symbol_file.txt");
 		context.symbolTable.Print (sym);
@@ -23,16 +23,15 @@ class Compiler
 
 	Logger logger;
 	Lexer lexer;
-	PascalParser parser;
 };
 
 
 int main (int argc, char *argv[])
 {
 	std::vector<std::string> file_list;
-	//file_list.push_back("test_input/test_passing.txt");
+	file_list.push_back("test_input/test_passing.txt");
 	//file_list.push_back ("test_input/test_some_errors.txt");
-	file_list.push_back ("test_input/test_sem.txt");
+	//file_list.push_back ("test_input/test_sem.txt");
 
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
 

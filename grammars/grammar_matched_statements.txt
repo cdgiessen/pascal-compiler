@@ -92,6 +92,7 @@ term ->
 
 factor ->
     id
+	id [ expression ]
     num
     ( expression )
     not factor
