@@ -168,9 +168,9 @@ class PascalParser
 	RetType Variable (ParserContext &pc);
 	RetType VariableFactored (ParserContext &pc);
 	RetType ProcedureStatement (ParserContext &pc);
-	RetType ProcedureStatmentFactored (ParserContext &pc);
-	RetType ExpressionList (ParserContext &pc);
-	RetType ExpressionListPrime (ParserContext &pc);
+	RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id);
+	RetType ExpressionList (ParserContext &pc, std::vector < RetType>& expr_list);
+	RetType ExpressionListPrime (ParserContext &pc, std::vector < RetType>& expr_list);
 	RetType Expression (ParserContext &pc);
 	RetType ExpressionFactored (ParserContext &pc);
 	RetType SimpleExpression (ParserContext &pc);

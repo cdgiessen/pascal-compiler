@@ -63,14 +63,14 @@ bool ParseTree::CheckProcedure (SymbolID s)
 std::vector<RetType> ParseTree::SubProcedureType (SymbolID s)
 {
 	ProcedureID curProc = eye;
-	do
+	while (curProc != -1)
 	{
 		for (auto [id, type] : procedures.at (curProc).sub_procs)
 		{
 			if (id == s) { return procedures.at (curProc).Signature (); }
 		}
 		curProc = procedures.at (curProc).parent;
-	} while (procedures.at (curProc).parent != -1);
+	}
 	return {};
 }
 
@@ -263,7 +263,7 @@ RetType PascalParser::ProgramStatementFactored (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
+		case (TT::VAR):
 			Declarations (pc);
 			ProgramStatementFactoredFactored (pc);
 			break;
@@ -278,7 +278,7 @@ RetType PascalParser::ProgramStatementFactored (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VARIABLE, TT::PROCEDURE, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::VAR, TT::PROCEDURE, TT::BEGIN });
 			pc.Synch ({ TT::END_FILE });
 	}
 	return ret;
@@ -358,9 +358,9 @@ RetType PascalParser::Declarations (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
+		case (TT::VAR):
 			[&] {
-				pc.Match (TT::VARIABLE);
+				pc.Match (TT::VAR);
 				auto tid = pc.Current ();
 				pc.Match (TT::ID);
 
@@ -378,7 +378,7 @@ RetType PascalParser::Declarations (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VARIABLE });
+			pc.LogErrorExpectedGot ({ TT::VAR });
 
 			pc.Synch ({ TT::PROCEDURE, TT::BEGIN });
 	}
@@ -390,9 +390,9 @@ RetType PascalParser::DeclarationsPrime (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
+		case (TT::VAR):
 			[&] {
-				pc.Match (TT::VARIABLE);
+				pc.Match (TT::VAR);
 				auto tid = pc.Current ();
 				pc.Match (TT::ID);
 				pc.Match (TT::COLON);
@@ -410,7 +410,7 @@ RetType PascalParser::DeclarationsPrime (ParserContext &pc)
 		case (TT::BEGIN):
 			break;
 		default:
-			pc.LogErrorExpectedGot ({ TT::PROCEDURE, TT::BEGIN, TT::VARIABLE });
+			pc.LogErrorExpectedGot ({ TT::PROCEDURE, TT::BEGIN, TT::VAR });
 			pc.Synch ({ TT::PROCEDURE, TT::BEGIN });
 	}
 	return ret;
@@ -429,23 +429,41 @@ RetType PascalParser::Type (ParserContext &pc)
 				pc.Match (TT::BRACKET_OPEN);
 				auto ts = pc.Current ();
 				if (std::get<NumType> (ts.attrib).val.index () != 0)
-				{ pc.LogErrorSem ("Array bounds not an int"); } pc.Match (TT::NUM);
+				{
+					ret = RT_err;
+					pc.LogErrorSem ("Array right bound not an int");
+				}
+				pc.Match (TT::NUM);
 				pc.Match (TT::DOT_DOT);
 
 				auto te = pc.Current ();
 				if (std::get<NumType> (te.attrib).val.index () != 0)
-				{ pc.LogErrorSem ("Array bounds not an int"); } pc.Match (TT::NUM);
+				{
+					ret = RT_err;
+					pc.LogErrorSem ("Array left bound not an int");
+				}
+				pc.Match (TT::NUM);
 				pc.Match (TT::BRACKET_CLOSE);
 				pc.Match (TT::OF);
 				auto t = StandardType (pc);
-				if (t == RT_int)
-				{ return RetType (RT_arr_int, GetNumValInt (te) - GetNumValInt (ts)); }
-				else if (t == RT_real)
+				if (ret != RT_err)
 				{
-					return RetType (RT_arr_real, GetNumValInt (te) - GetNumValInt (ts));
+					if (GetNumValInt (te) - GetNumValInt (ts) <= 0)
+					{
+						pc.LogErrorSem ("Array bounds must be positive");
+						return RT_err;
+					}
+					else if (t == RT_int)
+					{
+						return RetType (RT_arr_int, GetNumValInt (te) - GetNumValInt (ts));
+					}
+					else if (t == RT_real)
+					{
+						return RetType (RT_arr_real, GetNumValInt (te) - GetNumValInt (ts));
+					}
 				}
-				else
-					return RT_err;
+				return RT_err;
+				
 			}();
 			break;
 		case (TT::STANDARD_TYPE):
@@ -466,7 +484,7 @@ RetType PascalParser::StandardType (ParserContext &pc)
 	switch (pc.Current ().type)
 	{
 		case (TT::STANDARD_TYPE):
-			[&] {
+			return [&]() -> RetType {
 				auto t = pc.Match (TT::STANDARD_TYPE);
 				switch (std::get<StandardTypeEnum> (t.attrib))
 				{
@@ -554,7 +572,7 @@ RetType PascalParser::SubprogramDeclarationFactored (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
+		case (TT::VAR):
 			Declarations (pc);
 			SubprogramDeclarationFactoredFactored (pc);
 			break;
@@ -567,7 +585,7 @@ RetType PascalParser::SubprogramDeclarationFactored (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VARIABLE, TT::PROCEDURE, TT::BEGIN });
+			pc.LogErrorExpectedGot ({ TT::VAR, TT::PROCEDURE, TT::BEGIN });
 			pc.Synch ({ TT::SEMICOLON });
 	}
 	return ret;
@@ -613,7 +631,7 @@ RetType PascalParser::SubprogramHead (ParserContext &pc)
 		default:
 			pc.LogErrorExpectedGot ({ TT::PROCEDURE });
 
-			pc.Synch ({ TT::PROCEDURE, TT::VARIABLE, TT::BEGIN });
+			pc.Synch ({ TT::PROCEDURE, TT::VAR, TT::BEGIN });
 	}
 	return ret;
 }
@@ -633,7 +651,7 @@ RetType PascalParser::SubprogramHeadFactored (ParserContext &pc)
 
 		default:
 			pc.LogErrorExpectedGot ({ TT::SEMICOLON, TT::PAREN_OPEN });
-			pc.Synch ({ TT::VARIABLE, TT::BEGIN, TT::PROCEDURE });
+			pc.Synch ({ TT::VAR, TT::BEGIN, TT::PROCEDURE });
 	}
 	return ret;
 }
@@ -763,7 +781,7 @@ RetType PascalParser::OptionalStatements (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
+		case (TT::ID):
 		case (TT::WHILE):
 		case (TT::BEGIN):
 		case (TT::IF):
@@ -772,7 +790,7 @@ RetType PascalParser::OptionalStatements (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VARIABLE, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
 			pc.Synch ({ TT::END });
 	}
 	return ret;
@@ -783,7 +801,7 @@ RetType PascalParser::StatementList (ParserContext &pc)
 
 	switch (pc.Current ().type)
 	{
-		case (TT::VARIABLE):
+		case (TT::ID):
 		case (TT::WHILE):
 		case (TT::BEGIN):
 		case (TT::IF):
@@ -793,7 +811,7 @@ RetType PascalParser::StatementList (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VARIABLE, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
 			pc.Synch ({ TT::END });
 			return RT_err;
 	}
@@ -862,7 +880,7 @@ RetType PascalParser::Statement (ParserContext &pc)
 			break;
 
 		default:
-			pc.LogErrorExpectedGot ({ TT::VARIABLE, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
+			pc.LogErrorExpectedGot ({ TT::ID, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
 			pc.Synch ({ TT::SEMICOLON, TT::ELSE, TT::END });
 			return RT_err;
 	}
@@ -979,9 +997,11 @@ RetType PascalParser::ProcedureStatement (ParserContext &pc)
 			[&] {
 				pc.Match (TT::CALL);
 				bool exists = pc.tree.CheckProcedure (GetSymbol (pc.Current ()));
-				if (exists) { pc.LogErrorProcedureScope (pc.Current ()); }
+				if (!exists) { pc.LogErrorProcedureScope (pc.Current ()); }
+				auto tid = GetSymbol (pc.Current ());
 				pc.Match (TT::ID);
-				ProcedureStatmentFactored (pc);
+
+				ProcedureStatmentFactored (pc, tid);
 			}();
 			break;
 
@@ -992,7 +1012,7 @@ RetType PascalParser::ProcedureStatement (ParserContext &pc)
 	}
 	return ret;
 }
-RetType PascalParser::ProcedureStatmentFactored (ParserContext &pc)
+RetType PascalParser::ProcedureStatmentFactored (ParserContext &pc, SymbolID id)
 {
 	RetType ret = RT_none;
 	switch (pc.Current ().type)
@@ -1000,7 +1020,32 @@ RetType PascalParser::ProcedureStatmentFactored (ParserContext &pc)
 		case (TT::PAREN_OPEN):
 			[&]() -> RetType {
 				pc.Match (TT::PAREN_OPEN);
-				auto ret = ExpressionList (pc);
+				std::vector<RetType> expr_list;
+				auto ret = ExpressionList (pc, expr_list);
+				auto param_list = pc.tree.SubProcedureType (id);
+				bool isEqual = true;
+				for (int i = 0; i < expr_list.size (); i++)
+				{
+					if (param_list.size () <= i) { isEqual = false; }
+					else if (param_list.at (i) != expr_list.at (i))
+					{
+						pc.LogErrorSem ("Argument " + std::to_string (i) + " is type "
+						                + expr_list.at (i).to_string () + " when it should be of type "
+						                + param_list.at (i).to_string ());
+						isEqual = false;
+					}
+				}
+				if (param_list.size () > expr_list.size ())
+				{
+					pc.LogErrorSem ("The call to procedure \"" + pc.SymbolName (id) + "\" has "
+					                + std::to_string (param_list.size () - expr_list.size ()) + " to few arguments");
+				}
+				else if (param_list.size () < expr_list.size ())
+				{
+					pc.LogErrorSem ("The call to procedure \"" + pc.SymbolName (id) + "\" has "
+					                + std::to_string (expr_list.size () - param_list.size ()) + " to many arguments");
+				}
+				if (!isEqual) { ret = RT_err; }
 				pc.Match (TT::PAREN_CLOSE);
 				return ret;
 			}();
@@ -1017,7 +1062,7 @@ RetType PascalParser::ProcedureStatmentFactored (ParserContext &pc)
 	// e-prod
 	return ret;
 }
-RetType PascalParser::ExpressionList (ParserContext &pc)
+RetType PascalParser::ExpressionList (ParserContext &pc, std::vector<RetType> &expr_list)
 {
 	RetType ret = RT_none;
 
@@ -1028,8 +1073,9 @@ RetType PascalParser::ExpressionList (ParserContext &pc)
 		case (TT::NUM):
 		case (TT::NOT):
 		case (TT::SIGN):
-			Expression (pc);
-			ExpressionListPrime (pc);
+			ret = Expression (pc);
+			expr_list.push_back (ret);
+			ExpressionListPrime (pc, expr_list);
 			break;
 
 		default:
@@ -1039,7 +1085,7 @@ RetType PascalParser::ExpressionList (ParserContext &pc)
 	}
 	return ret;
 }
-RetType PascalParser::ExpressionListPrime (ParserContext &pc)
+RetType PascalParser::ExpressionListPrime (ParserContext &pc, std::vector<RetType> &expr_list)
 {
 	RetType ret = RT_none;
 
@@ -1047,12 +1093,12 @@ RetType PascalParser::ExpressionListPrime (ParserContext &pc)
 	{
 		case (TT::COMMA):
 			pc.Match (TT::COMMA);
-			Expression (pc);
-			ExpressionListPrime (pc);
+			ret = Expression (pc);
+			expr_list.push_back (ret);
+			ExpressionListPrime (pc, expr_list);
 			break;
 
 		case (TT::PAREN_CLOSE):
-			// check args type
 			break;
 		default:
 			pc.LogErrorExpectedGot ({ TT::PAREN_CLOSE, TT::COMMA });
@@ -1257,8 +1303,7 @@ RetType PascalParser::Factor (ParserContext &pc)
 					pc.LogErrorIdentifierScope (pc.Current ());
 
 					pc.Match (TT::ID);
-					auto ret = FactorPrime (pc, RT_err);
-					return ret;
+					return FactorPrime (pc, RT_err);
 				}
 				else if (exists.value () == RT_none)
 				{
@@ -1272,6 +1317,7 @@ RetType PascalParser::Factor (ParserContext &pc)
 				{
 					pc.Match (TT::ID);
 					auto ret = FactorPrime (pc, exists.value ());
+
 					return ret;
 				}
 			}();
@@ -1289,8 +1335,9 @@ RetType PascalParser::Factor (ParserContext &pc)
 			break;
 		case (TT::PAREN_OPEN):
 			pc.Match (TT::PAREN_OPEN);
-			return Expression (pc);
+			ret = Expression (pc);
 			pc.Match (TT::PAREN_CLOSE);
+			return ret;
 			break;
 		case (TT::NOT):
 			pc.Match (TT::NOT);
@@ -1366,7 +1413,7 @@ RetType PascalParser::FactorPrime (ParserContext &pc, RetType in)
 		case (TT::ELSE):
 		case (TT::DO):
 		case (TT::END):
-			return RT_none;
+			return in;
 			break;
 
 		default:

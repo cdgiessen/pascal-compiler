@@ -1,33 +1,33 @@
 program example(input, output);
 
-var x: integer;
-var y: array [0 .. 10] of real;
-var z: array [0 .. 10] of integer;
+  var x: integer;
+  var y: array [0 .. 10] of real;
+  var z: array [0 .. 10] of integer;
 
-procedure gcd(a: integer ; b: integer);
-begin
-	if b = 0 then gcd := a;
-	call gcd(b, a mod b)
-end;
-
-procedure gcd(a: integer ; b: integer);
-	procedure in(a: integer ; b: integer);
-	var x: real;
+	procedure gcd(a: integer ; b: integer);
 	begin
+		if b = 0 then b := a;
 		call gcd(b, a mod b)
 	end;
-	procedure in2;
+
+	procedure cdg(a: integer ; b: integer);
+		procedure in(a: integer ; b: integer);
+		  var x: real;
+			begin
+				call gcd(b, a mod b)
+			end;
+		procedure in2;
+			begin
+				if b = 0 then gcd := a
+			end;
+		procedure in3(a : real);
+			begin
+			end;
 	begin
-		if b = 0 then gcd := a
+		call in1(a, b);
+		call in2;
+		call in3(0)
 	end;
-	procedure in3(a : real);
-	begin
-	end;
-begin
-	call in1(a, b);
-	call in2;
-	call in3
-end;
 
 begin
 	x:= 1;
