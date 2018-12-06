@@ -281,6 +281,7 @@ RetType ProgramStatementFactored (ParserContext &pc)
 			pc.Synch ({ TT::END_FILE });
 			return RT_err;
 	}
+	return RT_none;
 }
 RetType ProgramStatementFactoredFactored (ParserContext &pc)
 {
@@ -301,6 +302,7 @@ RetType ProgramStatementFactoredFactored (ParserContext &pc)
 			pc.Synch ({ TT::END_FILE });
 			return RT_err;
 	}
+	return RT_none;
 }
 
 RetType ident_list_id (ParserContext &pc)
@@ -342,12 +344,12 @@ RetType IdentifierListPrime (ParserContext &pc)
 		case (TT::COMMA):
 			return ident_list_prime (pc);
 		case (TT::P_C):
-			break;
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::COMMA, TT::P_C });
 			pc.Synch ({ TT::P_C });
+			return RT_err;
 	}
-
 	// e-prod
 }
 
@@ -406,7 +408,7 @@ RetType DeclarationsPrime (ParserContext &pc)
 			return decls_prime (pc);
 		case (TT::PROC):
 		case (TT::BEGIN):
-			break;
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::PROC, TT::BEGIN, TT::VAR });
 			pc.Synch ({ TT::PROC, TT::BEGIN });
@@ -476,7 +478,8 @@ RetType Type (ParserContext &pc)
 
 RetType std_type (ParserContext &pc)
 {
-	auto t = pc.Match (TT::STD_T);
+	auto t = pc.Current ();
+	pc.Match (TT::STD_T);
 	switch (std::get<StandardTypeEnum> (t.attrib))
 	{
 		case (StandardTypeEnum::integer):
@@ -510,9 +513,7 @@ RetType SubprogramDeclarations (ParserContext &pc)
 		case (TT::PROC):
 			SubprogramDeclaration (pc);
 			pc.Match (TT::SEMIC);
-			SubprogramDeclarationsPrime (pc);
-			break;
-
+			return SubprogramDeclarationsPrime (pc);
 		default:
 			pc.LogErrorExpectedGot ({ TT::PROC });
 			pc.Synch ({ TT::BEGIN });
@@ -526,10 +527,9 @@ RetType SubprogramDeclarationsPrime (ParserContext &pc)
 		case (TT::PROC):
 			SubprogramDeclaration (pc);
 			pc.Match (TT::SEMIC);
-			SubprogramDeclarationsPrime (pc);
-			break;
+			return SubprogramDeclarationsPrime (pc);
 		case (TT::BEGIN):
-			break;
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::PROC, TT::BEGIN });
 			pc.Synch ({ TT::BEGIN });
@@ -544,8 +544,7 @@ RetType SubprogramDeclaration (ParserContext &pc)
 		case (TT::PROC):
 			SubprogramHead (pc);
 			SubprogramDeclarationFactored (pc);
-			break;
-
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::PROC });
 			pc.Synch ({ TT::SEMIC });
@@ -573,6 +572,7 @@ RetType SubprogramDeclarationFactored (ParserContext &pc)
 			pc.Synch ({ TT::SEMIC });
 			return RT_err;
 	}
+	return RT_none;
 }
 RetType SubprogramDeclarationFactoredFactored (ParserContext &pc)
 {
@@ -591,6 +591,7 @@ RetType SubprogramDeclarationFactoredFactored (ParserContext &pc)
 			pc.Synch ({ TT::SEMIC });
 			return RT_err;
 	}
+	return RT_none;
 }
 
 RetType sub_prog_head_procedure (ParserContext &pc)
@@ -633,6 +634,7 @@ RetType SubprogramHeadFactored (ParserContext &pc)
 			pc.Synch ({ TT::VAR, TT::BEGIN, TT::PROC });
 			return RT_err;
 	}
+	return RT_none;
 }
 RetType Arguments (ParserContext &pc)
 {
@@ -642,8 +644,7 @@ RetType Arguments (ParserContext &pc)
 			pc.Match (TT::P_O);
 			ParameterList (pc);
 			pc.Match (TT::P_C);
-			break;
-
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::P_O });
 			pc.Synch ({ TT::SEMIC });
@@ -706,7 +707,7 @@ RetType ParameterListPrime (ParserContext &pc)
 		case (TT::SEMIC):
 			return param_list_prime_id (pc);
 		case (TT::P_C):
-			break;
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::SEMIC, TT::P_C });
 			pc.Synch ({ TT::P_C });
@@ -720,9 +721,7 @@ RetType CompoundStatement (ParserContext &pc)
 	{
 		case (TT::BEGIN):
 			pc.Match (TT::BEGIN);
-			CompoundStatementFactored (pc);
-			break;
-
+			return CompoundStatementFactored (pc);
 		default:
 			pc.LogErrorExpectedGot ({ TT::BEGIN });
 			pc.Synch ({ TT::SEMIC, TT::DOT });
@@ -752,6 +751,7 @@ RetType CompoundStatementFactored (ParserContext &pc)
 			pc.Synch ({ TT::SEMIC, TT::DOT });
 			return RT_err;
 	}
+	return RT_none;
 }
 RetType OptionalStatements (ParserContext &pc)
 {
@@ -762,9 +762,7 @@ RetType OptionalStatements (ParserContext &pc)
 		case (TT::BEGIN):
 		case (TT::IF):
 		case (TT::CALL):
-			StatementList (pc);
-			break;
-
+			return StatementList (pc);
 		default:
 			pc.LogErrorExpectedGot ({ TT::ID, TT::WHILE, TT::BEGIN, TT::IF, TT::CALL });
 			pc.Synch ({ TT::END });
@@ -788,6 +786,7 @@ RetType StatementList (ParserContext &pc)
 			pc.Synch ({ TT::END });
 			return RT_err;
 	}
+	return RT_none;
 }
 RetType StatementListPrime (ParserContext &pc)
 {
@@ -805,6 +804,8 @@ RetType StatementListPrime (ParserContext &pc)
 			pc.Synch ({ TT::END });
 			return RT_err;
 	}
+	return RT_none;
+
 	// e -prod
 }
 
@@ -889,6 +890,7 @@ RetType StatementFactoredBegin (ParserContext &pc)
 			pc.Synch ({ TT::SEMIC, TT::ELSE, TT::END });
 			return RT_err;
 	}
+	return RT_none;
 }
 RetType StatementFactoredElse (ParserContext &pc)
 {
@@ -906,6 +908,8 @@ RetType StatementFactoredElse (ParserContext &pc)
 			pc.Synch ({ TT::SEMIC, TT::ELSE, TT::END });
 			return RT_err;
 	}
+	return RT_none;
+
 	// e-prod
 }
 
@@ -1058,7 +1062,7 @@ RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id, RetType in)
 		case (TT::SEMIC):
 		case (TT::ELSE):
 		case (TT::END):
-			break;
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::P_O, TT::SEMIC, TT::ELSE });
 			pc.Synch ({ TT::ELSE, TT::SEMIC, TT::END });
@@ -1104,7 +1108,7 @@ RetType ExpressionListPrime (ParserContext &pc, std::vector<RetType> &expr_list,
 		case (TT::COMMA):
 			return expr_list_prime_elem (pc, expr_list, in);
 		case (TT::P_C):
-			break;
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::P_C, TT::COMMA });
 			pc.Synch ({ TT::P_C });
@@ -1417,7 +1421,8 @@ RetType factor_id (ParserContext &pc, RetType in)
 }
 RetType factor_num (ParserContext &pc, RetType in)
 {
-	auto tid = pc.Match (TT::NUM);
+	auto tid = pc.Current ();
+	pc.Match (TT::NUM);
 	if (std::get<NumType> (tid.attrib).val.index () == 0)
 		return RT_int;
 	else if (std::get<NumType> (tid.attrib).val.index () == 1)
@@ -1519,8 +1524,7 @@ RetType Sign (ParserContext &pc, RetType in)
 	{
 		case (TT::SIGN):
 			pc.Match (TT::SIGN);
-			break;
-
+			return RT_none;
 		default:
 			pc.LogErrorExpectedGot ({ TT::SIGN });
 			pc.Synch ({ TT::ID, TT::P_O, TT::NUM, TT::NOT });
