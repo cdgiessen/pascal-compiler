@@ -14,8 +14,8 @@ struct RetType
 	RetType (const uint32_t t) { data = t; }
 
 	uint32_t data;
-	operator uint32_t () { return data; }
-	std::string to_string ()
+	operator uint32_t () const { return data; }
+	std::string to_string () const
 	{
 		if (data == 0) return "error";
 		if (data == 1) return "none";
@@ -25,14 +25,22 @@ struct RetType
 		if ((data & 255) == 5)
 		{
 			int size = data >> 8;
-			return "arr_int;size=" + std::to_string (size);
+			return "array of ints with size of " + std::to_string (size);
 		}
 		if ((data & 255) == 6)
 		{
 			int size = data >> 8;
-			return "arr_real;size=" + std::to_string (size);
+			return "array of reals with size of " + std::to_string (size);
 		}
 		return "NOT A TYPE!";
+	}
+	uint32_t size () const
+	{
+		if (data == 3) return 4;
+		if (data == 4) return 8;
+		if ((data & 255) == 5) { return 4 * (data >> 8); }
+		if ((data & 255) == 6) { return 8 * (data >> 8); }
+		return 0;
 	}
 };
 
@@ -90,11 +98,11 @@ class ParseTree
 	void Push (ProcedureID id);
 	void Pop ();
 
+	std::unordered_map<ProcedureID, Procedure> procedures;
+
 	private:
 	ProcedureID eye = 0;
 	ProcedureID procIDCounter = 0;
-
-	std::unordered_map<ProcedureID, Procedure> procedures;
 };
 
 
@@ -105,16 +113,18 @@ class ParserContext
 
 	TokenInfo Current () const;
 
-	void Match (TT tt, RetType& rt);
-	void Synch (std::vector<TT>const& set);
+	void Match (TT tt, RetType &rt);
+	void Synch (std::vector<TT> const &set);
 
-	void LogErrorExpectedGot (std::vector<TT>const& types);
+	void LogErrorExpectedGot (std::vector<TT> const &types);
 
 	void LogErrorSem (RetType in, std::string msg);
 
 	void LogErrorUniqueProcedure (RetType in, TokenInfo t);
 	void LogErrorIdentifierScope (RetType in, TokenInfo t);
 	void LogErrorUniqueIdentifier (RetType in, TokenInfo t);
+
+	void Print (OutputFileHandle &out);
 
 	std::string SymbolName (SymbolID);
 

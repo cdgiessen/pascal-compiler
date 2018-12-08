@@ -54,10 +54,9 @@ class SymbolTable
 
 	std::string SymbolView (int loc)
 	{
-		if (loc > 0 && loc < symbols.size ())
-			return symbols.at (loc);
-		else
-			throw "Symbol not found!";
+		if (loc > 0 && loc < symbols.size ()) return symbols.at (loc);
+		return {};
+		// else throw "Symbol not found!";
 	}
 
 	void Print (OutputFileHandle &out)
