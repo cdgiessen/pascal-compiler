@@ -23,6 +23,10 @@ program example(input, output, output);
 		end;
 
 	procedure in2;
+		var a : array [0 .. 7] of integer;
+		var b : array [1 .. 7] of real;
+		var c : real;
+		var d : array [1 .. 7] of integer;
 		begin 
 		end;
 	procedure in3 (x:integer;y:real);

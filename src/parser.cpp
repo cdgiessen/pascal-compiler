@@ -182,8 +182,8 @@ void ParserContext::Print (OutputFileHandle &out)
 {
 	std::function<void(ProcedureID, int)> proc_print = [&, this](ProcedureID id, int width) {
 		fmt::print (out.FP (),
-		"{:<{}}Procedure Id: {}; Name: {}\n",
-		" ",
+		"{:=<{}}Procedure Id: {}; Name: {}\n",
+		"",
 		width,
 		std::to_string (id),
 		SymbolName (tree.procedures.at (id).name));
@@ -192,8 +192,8 @@ void ParserContext::Print (OutputFileHandle &out)
 		for (auto &[name, type] : tree.procedures.at (id).locals)
 		{
 			fmt::print (out.FP (),
-			"{:<{}}Local variable Name: {}, Type: {}, Address: {}\n",
-			" ",
+			"{:-<{}}Local variable Name: {}, Type: {}, Address: {}\n",
+			"",
 			width,
 			SymbolName (name),
 			type.to_string (),

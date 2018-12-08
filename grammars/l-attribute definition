@@ -1,0 +1,164 @@
+program_statement -> 
+    program {{offset = 0}} id {{checkaddgreennode(id.lex, TYPE_PRGM)}} ( identifier_list ) ; program_statement_factored
+
+program_statement_factored ->
+    declarations program_statement_factored_fractored
+    subprogram_declarations compound_statement .
+    compound_statement .
+
+program_statement_factored_fractored ->
+    subprogram_declarations compound_statement .
+    compound_statement .
+
+identifier_list ->
+    id {{checkaddbluenode(id.lex, TYPE_IDLIST)}} identifier_list_prime
+
+identifier_list_prime ->
+    , id {{checkaddbluenode(id.lex, TYPE_IDLIST)}} identifier_list_prime
+    e
+
+declarations ->
+    declarations_prime
+
+declarations_prime ->
+    var id : type {{checkaddbluenode(id.lex, TYPE_PARAMLiST, offset); offset += type.width}}; declarations_prime
+    e
+
+type ->
+    standard_type {{type.type = standard_type.type; type.width = standard_type.width}}
+    array [ num{{1}} .. num{{2}} ] of standard_type {{type.width = (num2 - num1 + 1) * standard_type.width}} 
+        [0:[type.type, <- , standard_type.type], 
+        1: [TYPE_ARR_INT, if , TYPE_INT], 
+        2: [TYPE_ARR_REAL, if , TYPE_REAL], 
+        3: [TYPE_ERR, if , TYPE_ERR], [TYPE_ERR*, otherwise, ]]
+
+
+standard_type ->
+    integer {{standard_type.type = TYPE_INT; standard_type.width = 4}}
+    real {{standard_type.type = TYPE_REAL; standard_type.width = 8}}
+
+subprogram_declarations ->
+    subprogram_declarations_prime
+
+subprogram_declarations_prime ->
+    subprogram_declaration ; subprogram_declarations_prime
+    e
+
+subprogram_declaration ->
+    subprogram_head subprogram_declaration_factored
+
+subprogram_declaration_factored ->
+    declarations ssubprogram_declaration_factored_factored
+    subprogram_declarations compound_statement
+    compound_statement
+
+subprogram_declaration_factored_factored ->
+    subprogram_declarations compound_statement
+    compound_statement
+
+subprogram_head ->
+    procedure {{offset = 0}} id {{checkaddgreennode(id.lex, TYPE_TEMP)}} subprogram_head_factored
+
+subprogram_head_factored ->
+    arguments ;
+    ;
+
+arguments ->
+    ( parameter_list )
+
+parameter_list ->
+    id : type parameter_list_prime
+
+parameter_list_prime ->
+    ; id : parameter_list_prime
+    e
+
+compound_statement ->
+    begin compound_statement_factored
+
+compound_statement_factored ->
+    optional_statements end
+	end
+
+optional_statements ->
+    statement_list
+
+statement_list ->
+    statement statement_list_prime 
+
+statement_list_prime ->
+    ; statement statement_list_prime
+    e
+
+statement ->
+    variable assignop expression
+    procedure_statement
+    begin statement_factored_one
+    if expression then statement statement_factored_two
+    while expression do statement
+
+statement_factored_one ->
+  optional_statements end
+  end
+
+statement_factored_two ->
+  else statement
+  e
+
+variable ->
+    id variable_factored
+
+variable_factored ->
+    e
+    [ expression ]
+
+procedure_statement ->
+    call id procedure_statement_factored
+
+procedure_statement_factored ->
+    e
+    ( expression_list )
+
+ expression_list ->
+    expression expression_list_prime
+
+expression_list_prime ->
+    , expression expression_list_prime
+    e
+
+expression ->
+    simple_expression expression_factored
+
+expression_factored ->
+    e
+    relop simple_expression
+
+simple_expression ->
+    term simple_expression_prime
+    sign term simple_expression_prime
+
+simple_expression_prime ->
+    addop term simple_expression_prime
+    e
+
+term ->
+    factor term_prime
+
+term_prime ->
+    mulop factor term_prime
+    e
+
+factor ->
+    id factor_prime
+    num
+    ( expression )
+    not factor
+
+factor_prime ->	
+	[ expression ]
+	e 
+
+sign ->
+    +
+    -
+
