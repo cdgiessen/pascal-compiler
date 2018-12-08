@@ -105,16 +105,16 @@ class ParserContext
 
 	TokenInfo Current () const;
 
-	TokenInfo Match (TT tt);
-	void Synch (std::vector<TT> set);
+	void Match (TT tt, RetType& rt);
+	void Synch (std::vector<TT>const& set);
 
-	void LogErrorExpectedGot (std::vector<TT> types);
+	void LogErrorExpectedGot (std::vector<TT>const& types);
 
-	void LogErrorSem (std::string msg);
+	void LogErrorSem (RetType in, std::string msg);
 
-	void LogErrorUniqueProcedure (TokenInfo t);
-	void LogErrorIdentifierScope (TokenInfo t);
-	void LogErrorUniqueIdentifier (TokenInfo t);
+	void LogErrorUniqueProcedure (RetType in, TokenInfo t);
+	void LogErrorIdentifierScope (RetType in, TokenInfo t);
+	void LogErrorUniqueIdentifier (RetType in, TokenInfo t);
 
 	std::string SymbolName (SymbolID);
 
@@ -131,36 +131,36 @@ namespace Parser
 {
 void Parse (ParserContext &pc);
 
-RetType ProgramStatement (ParserContext &pc);
-RetType ProgramStatementFactored (ParserContext &pc);
-RetType ProgramStatementFactoredFactored (ParserContext &pc);
-RetType IdentifierList (ParserContext &pc);
-RetType IdentifierListPrime (ParserContext &pc);
-RetType Declarations (ParserContext &pc);
-RetType DeclarationsPrime (ParserContext &pc);
-RetType Type (ParserContext &pc);
-RetType StandardType (ParserContext &pc);
-RetType SubprogramDeclarations (ParserContext &pc);
-RetType SubprogramDeclarationsPrime (ParserContext &pc);
-RetType SubprogramDeclaration (ParserContext &pc);
-RetType SubprogramDeclarationFactored (ParserContext &pc);
-RetType SubprogramDeclarationFactoredFactored (ParserContext &pc);
-RetType SubprogramHead (ParserContext &pc);
-RetType SubprogramHeadFactored (ParserContext &pc);
-RetType Arguments (ParserContext &pc);
-RetType ParameterList (ParserContext &pc);
-RetType ParameterListPrime (ParserContext &pc);
-RetType CompoundStatement (ParserContext &pc);
-RetType CompoundStatementFactored (ParserContext &pc);
-RetType OptionalStatements (ParserContext &pc);
-RetType StatementList (ParserContext &pc);
-RetType StatementListPrime (ParserContext &pc);
-RetType Statement (ParserContext &pc);
-RetType StatementFactoredBegin (ParserContext &pc);
-RetType StatementFactoredElse (ParserContext &pc);
-RetType Variable (ParserContext &pc);
+RetType ProgramStatement (ParserContext &pc, RetType in);
+RetType ProgramStatementFactored (ParserContext &pc, RetType in);
+RetType ProgramStatementFactoredFactored (ParserContext &pc, RetType in);
+RetType IdentifierList (ParserContext &pc, RetType in);
+RetType IdentifierListPrime (ParserContext &pc, RetType in);
+RetType Declarations (ParserContext &pc, RetType in);
+RetType DeclarationsPrime (ParserContext &pc, RetType in);
+RetType Type (ParserContext &pc, RetType in);
+RetType StandardType (ParserContext &pc, RetType in);
+RetType SubprogramDeclarations (ParserContext &pc, RetType in);
+RetType SubprogramDeclarationsPrime (ParserContext &pc, RetType in);
+RetType SubprogramDeclaration (ParserContext &pc, RetType in);
+RetType SubprogramDeclarationFactored (ParserContext &pc, RetType in);
+RetType SubprogramDeclarationFactoredFactored (ParserContext &pc, RetType in);
+RetType SubprogramHead (ParserContext &pc, RetType in);
+RetType SubprogramHeadFactored (ParserContext &pc, RetType in);
+RetType Arguments (ParserContext &pc, RetType in);
+RetType ParameterList (ParserContext &pc, RetType in);
+RetType ParameterListPrime (ParserContext &pc, RetType in);
+RetType CompoundStatement (ParserContext &pc, RetType in);
+RetType CompoundStatementFactored (ParserContext &pc, RetType in);
+RetType OptionalStatements (ParserContext &pc, RetType in);
+RetType StatementList (ParserContext &pc, RetType in);
+RetType StatementListPrime (ParserContext &pc, RetType in);
+RetType Statement (ParserContext &pc, RetType in);
+RetType StatementFactoredBegin (ParserContext &pc, RetType in);
+RetType StatementFactoredElse (ParserContext &pc, RetType in);
+RetType Variable (ParserContext &pc, RetType in);
 RetType VariableFactored (ParserContext &pc, RetType in);
-RetType ProcedureStatement (ParserContext &pc);
+RetType ProcedureStatement (ParserContext &pc, RetType in);
 RetType ProcedureStatmentFactored (ParserContext &pc, SymbolID id, RetType in);
 RetType ExpressionList (ParserContext &pc, std::vector<RetType> &expr_list, RetType in);
 RetType ExpressionListPrime (ParserContext &pc, std::vector<RetType> &expr_list, RetType in);
