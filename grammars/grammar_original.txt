@@ -40,6 +40,10 @@ arugments ->
     ( parameter_list )
     | e
 
+   parameter_list ->
+    id : type
+    | parameter_list ; id : type
+
 compound_statement ->
     begin
     optional_statements

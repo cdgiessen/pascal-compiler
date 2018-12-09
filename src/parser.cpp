@@ -478,11 +478,11 @@ RetType type_array (ParserContext &pc, RetType in)
 		}
 		else if (t == RT_int)
 		{
-			return RetType (RT_arr_int, GetNumValInt (te) - GetNumValInt (ts));
+			return RetType (RT_arr_int, GetNumValInt (te) - GetNumValInt (ts) + 1);
 		}
 		else if (t == RT_real)
 		{
-			return RetType (RT_arr_real, GetNumValInt (te) - GetNumValInt (ts));
+			return RetType (RT_arr_real, GetNumValInt (te) - GetNumValInt (ts) + 1);
 		}
 	}
 	return RT_err;

@@ -1,5 +1,5 @@
 program_statement -> 
-    program {{offset = 0}} id {{checkaddgreennode(id.lex, TYPE_PRGM)}} ( identifier_list ) ; program_statement_factored
+    program {{offset = 0}} id {{checkaddgreennode(id.lex)}} ( identifier_list ) ; program_statement_factored
 
 program_statement_factored ->
     declarations program_statement_factored_fractored
@@ -30,7 +30,8 @@ type ->
         [0:[type.type, <- , standard_type.type], 
         1: [TYPE_ARR_INT, if , TYPE_INT], 
         2: [TYPE_ARR_REAL, if , TYPE_REAL], 
-        3: [TYPE_ERR, if , TYPE_ERR], [TYPE_ERR*, otherwise, ]]
+        3: [TYPE_ERR, if , TYPE_ERR], 
+        4: [TYPE_ERR*, otherwise, ]]
 
 
 standard_type ->
@@ -57,21 +58,21 @@ subprogram_declaration_factored_factored ->
     compound_statement
 
 subprogram_head ->
-    procedure {{offset = 0}} id {{checkaddgreennode(id.lex, TYPE_TEMP)}} subprogram_head_factored
+    procedure id {{checkaddgreennode(id.lex)}} subprogram_head_factored
 
 subprogram_head_factored ->
-    arguments ;
-    ;
+    arguments {{eye_stack.peek().args = arguments.str}};
+    {{eye_stack.peek().args = "" }}; 
 
 arguments ->
-    ( parameter_list )
+    ( parameter_list {{arguments.str = parameter_list.str}})
 
 parameter_list ->
-    id : type parameter_list_prime
+    id : type {{checkaddbluenode(id.lex, type.type)}} parameter_list_prime {{parameter_list.str = type2str(type.type).parameter_list_prime.str}}
 
 parameter_list_prime ->
-    ; id : parameter_list_prime
-    e
+    ; id : type {{checkaddbluenode(id.lex, type.type)}} parameter_list_prime {{parameter_list_prime.str = type2str(type.type).parameter_list_prime.str}}
+    e {{parameter_list_prime.str = ""}}
 
 compound_statement ->
     begin compound_statement_factored
@@ -92,10 +93,16 @@ statement_list_prime ->
 
 statement ->
     variable assignop expression
+    [0:[statment.type, <- , variable.type, expression.type],
+    1: [TYPE_ERR, if, TYPE_ERR, any]
+    2: [TYPE_ERR, if, any, TYPE_ERR]    
+    3: [TYPE_ERR*, if , TYPE_, !TYPE],
+    1: [void, if , TYPE, TYPE],
+    4: [TYPE_ERR*, otherwise]]
     procedure_statement
     begin statement_factored_one
-    if expression then statement statement_factored_two
-    while expression do statement
+    if expression {{assert(expression.type == TYPE_BOOL)}} then statement statement_factored_two
+    while expression {{assert(expression.type == TYPE_BOOL)}} do statement
 
 statement_factored_one ->
   optional_statements end
