@@ -113,11 +113,17 @@ statement_factored_two ->
   e
 
 variable ->
-    id variable_factored
+    id {{variable.i = getttype(id.lex)}} variable_factored {{variable.type = variable_factored.type}}
 
 variable_factored ->
-    e
+    e {{variable_factored.type = variable_factored.i}}
     [ expression ]
+	[0:[variable_factored, <- , variable.i, expresion],
+	1:[TYPE_ERR, if , TYPE_ERR , any],
+	2:[TYPE_ERR, if , any , TYPE_ERR],
+	3:[TYPE_ERR*, if , any , !TYPE_INT],
+	4:[TYPE_INT, if , TYPE_ARR_INT, TYPE_INT],
+	5:[TYPE_REAL, if, TYPE_ARR_REAL, TYPE_INT]]
 
 procedure_statement ->
     call id procedure_statement_factored

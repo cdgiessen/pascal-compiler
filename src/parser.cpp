@@ -1266,13 +1266,16 @@ RetType SimpleExpression (ParserContext &pc, RetType in)
 }
 RetType simp_expr_prime_add (ParserContext &pc, RetType in)
 {
+	bool isAdd;
 	switch (pc.Current ().type)
 	{
 		case (TT::ADDOP):
 			pc.Match (TT::ADDOP, in);
+			isAdd = true;
 			break;
 		case (TT::SIGN):
 			Sign (pc, in);
+			isAdd = false;
 			break;
 	}
 	auto tr = Term (pc, in);
@@ -1289,21 +1292,30 @@ RetType simp_expr_prime_add (ParserContext &pc, RetType in)
 		}
 		return tr;
 	}
-	else
-	{
-		if (in != tr)
-		{
-			pc.LogErrorSem (in, "Cannot add values of type " + in.to_string () + " and " + tr.to_string ());
+	if(isAdd){
+		if ((tr == RT_int && in == RT_real) ||
+			(tr == RT_real && in == RT_int)) {
+			pc.LogErrorSem(in, "Cannot add values of type " + in.to_string() + " and " + tr.to_string());
 			return RT_err;
 		}
-		if (tr != sr)
-		{
-			pc.LogErrorSem (in,
-			"Types in an expression must be the same, not " + tr.to_string () + " and " + sr.to_string ());
-			return RT_err;
-		}
-		return sr;
 	}
+	else if (!isAdd) {
+		if (tr == RT_int && in == RT_int) return RT_int;
+		if (tr == RT_real && in == RT_real) return RT_real;
+
+	}
+	if (in != tr)
+	{
+		pc.LogErrorSem (in, "Cannot add values of type " + in.to_string () + " and " + tr.to_string ());
+		return RT_err;
+	}
+	if (tr != sr)
+	{
+		pc.LogErrorSem (in,
+		"Types in an expression must be the same, not " + tr.to_string () + " and " + sr.to_string ());
+		return RT_err;
+	}
+	return sr;
 }
 RetType SimpleExpressionPrime (ParserContext &pc, RetType in)
 {
@@ -1363,6 +1375,7 @@ RetType Term (ParserContext &pc, RetType in)
 }
 RetType term_prime_mulop (ParserContext &pc, RetType in)
 {
+	auto tid = pc.Current ();
 	pc.Match (TT::MULOP, in);
 	auto fr = Factor (pc, in);
 	auto tr = TermPrime (pc, fr);
@@ -1377,14 +1390,36 @@ RetType term_prime_mulop (ParserContext &pc, RetType in)
 		else
 			return fr;
 	}
+	else if ((std::get<MulOpEnum> (tid.attrib) == MulOpEnum::mul || std::get<MulOpEnum> (tid.attrib) == MulOpEnum::div)
+	         && ((fr == RT_real && tr == RT_real) || (fr == RT_int && tr == RT_int)))
+	{
+		return fr;
+	}
+	else if (std::get<MulOpEnum> (tid.attrib) == MulOpEnum::mod)
+	{
+		if (fr != RT_int || tr != RT_int)
+		{
+			pc.LogErrorSem (in, "Cannot perform mod on none int values");
+			return RT_err;
+		}
+	}
+	else if (std::get<MulOpEnum> (tid.attrib) == MulOpEnum::t_and)
+	{
+		if (fr != RT_bool || tr != RT_bool)
+		{
+			pc.LogErrorSem (in, "Cannot and non boolean expressions");
+			return RT_err;
+		}
+	}
 	else if (fr != tr)
 	{
+
 		pc.LogErrorSem (
 		in, "Terms must be be the same type, not " + fr.to_string () + " and " + tr.to_string ());
 		return RT_err;
 	}
 	return tr;
-}
+} // namespace Parser
 RetType TermPrime (ParserContext &pc, RetType in)
 {
 	switch (pc.Current ().type)
