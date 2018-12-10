@@ -137,6 +137,7 @@ struct NumType
 	{
 		if (t.val.index () == 0) return os << std::get<0> (t.val) << "(INT)";
 		if (t.val.index () == 1) return os << std::get<1> (t.val) << "(FLOAT)";
+		return os;
 	}
 };
 

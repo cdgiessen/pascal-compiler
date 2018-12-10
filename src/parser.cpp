@@ -181,31 +181,36 @@ std::string ParserContext::SymbolName (SymbolID loc)
 void ParserContext::Print (OutputFileHandle &out)
 {
 	std::function<void(ProcedureID, int)> proc_print = [&, this](ProcedureID id, int width) {
-		fmt::print (out.FP (),
-		"{:=<{}}Procedure Id: {}; Name: {}\n",
-		"",
-		width,
-		std::to_string (id),
-		SymbolName (tree.procedures.at (id).name));
-
-		uint32_t addr = 0;
-		for (auto &[name, type] : tree.procedures.at (id).locals)
+		if (tree.procedures.count (id) == 1)
 		{
+
+
 			fmt::print (out.FP (),
-			"{:-<{}}Local variable Name: {}, Type: {}, Address: {}\n",
+			"{:=<{}}Procedure Id: {}; Name: {}\n",
 			"",
 			width,
-			SymbolName (name),
-			type.to_string (),
-			std::to_string (addr));
+			std::to_string (id),
+			SymbolName (tree.procedures.at (id).name));
 
-			addr += type.size ();
+			uint32_t addr = 0;
+			for (auto &[name, type] : tree.procedures.at (id).locals)
+			{
+				fmt::print (out.FP (),
+				"{:-<{}}Local variable Name: {}, Type: {}, Address: {}\n",
+				"",
+				width,
+				SymbolName (name),
+				type.to_string (),
+				std::to_string (addr));
+
+				addr += type.size ();
+			}
+			for (auto &[name, sub_id] : tree.procedures.at (id).sub_procs)
+			{
+				proc_print (sub_id, width + 4);
+			}
+			fmt::print (out.FP (), "\n", " ", width);
 		}
-		for (auto &[name, sub_id] : tree.procedures.at (id).sub_procs)
-		{
-			proc_print (sub_id, width + 4);
-		}
-		fmt::print (out.FP (), "\n", " ", width);
 	};
 	proc_print (0, 0);
 }
@@ -261,7 +266,7 @@ void Parse (ParserContext &pc)
 	RetType ret = RT_none;
 	ProgramStatement (pc, ret);
 	pc.Match (TT::END_FILE, ret);
-	
+
 	//}
 	// catch (std::exception &err)
 	//{
@@ -293,6 +298,7 @@ void ProgramStatement (ParserContext &pc, RetType in)
 	{
 		case (TT::PROG):
 			prog_stmt_program (pc, in);
+			break;
 		default:
 			DefaultErr (pc, { TT::PROG }, { TT::END_FILE });
 	}
@@ -740,8 +746,7 @@ void CompoundStatementFactored (ParserContext &pc, RetType in)
 			break;
 
 		default:
-			DefaultErr (
-			pc, { TT::END, TT::BEGIN, TT::ID, TT::CALL, TT::IF, TT::WHILE }, { TT::SEMIC, TT::DOT });
+			DefaultErr (pc, { TT::END, TT::BEGIN, TT::ID, TT::CALL, TT::IF, TT::WHILE }, { TT::SEMIC, TT::DOT });
 	}
 }
 void OptionalStatements (ParserContext &pc, RetType in)
@@ -781,9 +786,9 @@ void StatementListPrime (ParserContext &pc, RetType in)
 	switch (pc.Current ().type)
 	{
 		case (TT::SEMIC):
-			pc.Match(TT::SEMIC, in);
-			Statement(pc, RT_none);
-			StatementListPrime(pc, RT_none);
+			pc.Match (TT::SEMIC, in);
+			Statement (pc, RT_none);
+			StatementListPrime (pc, RT_none);
 		case (TT::END):
 			break;
 
@@ -836,14 +841,15 @@ void Statement (ParserContext &pc, RetType in)
 			stmt_while (pc, in);
 			break;
 		case (TT::BEGIN):
-			pc.Match(TT::BEGIN, in);
-			StatementFactoredBegin(pc, RT_none);
+			pc.Match (TT::BEGIN, in);
+			// pc.tree.Push (-2);
+			StatementFactoredBegin (pc, RT_none);
 			break;
 		case (TT::IF):
 			stmt_if (pc, in);
 			break;
 		case (TT::CALL):
-			ProcedureStatement(pc, in);
+			ProcedureStatement (pc, in);
 			break;
 		default:
 			DefaultErr (
@@ -857,17 +863,17 @@ void StatementFactoredBegin (ParserContext &pc, RetType in)
 	{
 		case (TT::END):
 			pc.Match (TT::END, in);
-			pc.tree.Pop ();
+			// pc.tree.Pop ();
 			break;
 		case (TT::BEGIN):
 		case (TT::ID):
 		case (TT::CALL):
 		case (TT::IF):
 		case (TT::WHILE):
-			OptionalStatements(pc, in);
-			pc.Match(TT::END, in);
-			pc.tree.Pop();
-	
+			OptionalStatements (pc, in);
+			pc.Match (TT::END, in);
+			// pc.tree.Pop ();
+			break;
 		default:
 			DefaultErr (pc,
 			{ TT::END, TT::BEGIN, TT::ID, TT::CALL, TT::IF, TT::WHILE },

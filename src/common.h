@@ -150,6 +150,7 @@ class FileReader
 					std::string line;
 
 					std::getline (inFile, line, '\n');
+					// if (line.size () > 0) line.pop_back ();
 					lines.push_back (line);
 
 					cur_line_number++;

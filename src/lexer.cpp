@@ -404,10 +404,10 @@ void Lexer::CreateMachines ()
 				             return LexerMachineReturn (1, TokenInfo (TT::B_O, NoAttrib ()));
 			             if (line[0] == ']')
 				             return LexerMachineReturn (1, TokenInfo (TT::B_C, NoAttrib ()));
-						 if (line[0] == '*')
-							 return LexerMachineReturn(1, TokenInfo(TT::MULOP, MulOpEnum::mul));
-						 if (line[0] == '/')
-							 return LexerMachineReturn(1, TokenInfo(TT::MULOP, MulOpEnum::div));
+			             if (line[0] == '*')
+				             return LexerMachineReturn (1, TokenInfo (TT::MULOP, MulOpEnum::mul));
+			             if (line[0] == '/')
+				             return LexerMachineReturn (1, TokenInfo (TT::MULOP, MulOpEnum::div));
 			             if (line[0] == '+')
 				             return LexerMachineReturn (1, TokenInfo (TT::SIGN, SignOpEnum::plus));
 			             if (line[0] == '-')
@@ -427,7 +427,7 @@ void Lexer::CreateMachines ()
 			 i++;
 			 base_size++;
 		 }
-		 //if (i == 0) return {};
+		 // if (i == 0) return {};
 
 		 if (i >= line.size () || line[i] != '.') return {};
 
@@ -523,7 +523,7 @@ void Lexer::CreateMachines ()
 			 i++;
 			 base_size++;
 		 }
-		 //if (i == 0) return {};
+		 // if (i == 0) return {};
 
 		 if (i >= line.size () || line[i] != '.') return {};
 
