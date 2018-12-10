@@ -1,177 +1,162 @@
 program_statement -> 
     program {{offset = 0}} id {{checkaddgreennode(id.lex)}} ( identifier_list ) ; program_statement_factored
 
-program_statement_factored ->
-    declarations program_statement_factored_fractored
-    subprogram_declarations compound_statement .
-    compound_statement .
+program_statement_factored ->    declarations program_statement_factored_fractored
+program_statement_factored ->    subprogram_declarations compound_statement .
+program_statement_factored ->    compound_statement .
 
-program_statement_factored_fractored ->
-    subprogram_declarations compound_statement .
-    compound_statement .
+program_statement_factored_fractored -> subprogram_declarations compound_statement .
+program_statement_factored_fractored -> compound_statement .
 
-identifier_list ->
-    id {{checkaddbluenode(id.lex, TYPE_IDLIST)}} identifier_list_prime
+identifier_list -> id {{checkaddbluenode(id.lex, TYPE_IDLIST)}} identifier_list_prime
 
-identifier_list_prime ->
-    , id {{checkaddbluenode(id.lex, TYPE_IDLIST)}} identifier_list_prime
-    e
+identifier_list_prime -> , id {{checkaddbluenode(id.lex, TYPE_IDLIST)}} identifier_list_prime
+identifier_list_prime ->    e
 
-declarations ->
-    declarations_prime
+declarations -> declarations_prime
 
-declarations_prime ->
-    var id : type {{checkaddbluenode(id.lex, TYPE_PARAMLiST, offset); offset += type.width}}; declarations_prime
-    e
+declarations_prime -> var id : type {{checkaddbluenode(id.lex, TYPE_PARAMLiST, offset); offset += type.width}}; declarations_prime
+declarations_prime -> e
 
-type ->
-    standard_type {{type.type = standard_type.type; type.width = standard_type.width}}
-    array [ num{{1}} .. num{{2}} ] of standard_type {{type.width = (num2 - num1 + 1) * standard_type.width}} 
+type -> standard_type {{type.type = standard_type.type; type.width = standard_type.width}}
+type -> array [ num{{1}} .. num{{2}} ] of standard_type {{type.width = (num2 - num1) * standard_type.width}} 
         [0:[type.type, <- , standard_type.type], 
         1: [TYPE_ARR_INT, if , TYPE_INT], 
         2: [TYPE_ARR_REAL, if , TYPE_REAL], 
         3: [TYPE_ERR, if , TYPE_ERR], 
         4: [TYPE_ERR*, otherwise, ]]
 
+standard_type -> integer {{standard_type.type = TYPE_INT; standard_type.width = 4}}
+standard_type -> real {{standard_type.type = TYPE_REAL; standard_type.width = 8}}
 
-standard_type ->
-    integer {{standard_type.type = TYPE_INT; standard_type.width = 4}}
-    real {{standard_type.type = TYPE_REAL; standard_type.width = 8}}
+subprogram_declarations -> subprogram_declarations_prime
 
-subprogram_declarations ->
-    subprogram_declarations_prime
+subprogram_declarations_prime -> subprogram_declaration ; subprogram_declarations_prime
+subprogram_declarations_prime -> e
 
-subprogram_declarations_prime ->
-    subprogram_declaration ; subprogram_declarations_prime
-    e
+subprogram_declaration -> subprogram_head subprogram_declaration_factored
 
-subprogram_declaration ->
-    subprogram_head subprogram_declaration_factored
+subprogram_declaration_factored -> declarations ssubprogram_declaration_factored_factored
+subprogram_declaration_factored -> subprogram_declarations compound_statement
+subprogram_declaration_factored -> compound_statement
 
-subprogram_declaration_factored ->
-    declarations ssubprogram_declaration_factored_factored
-    subprogram_declarations compound_statement
-    compound_statement
+subprogram_declaration_factored_factored -> subprogram_declarations compound_statement
+subprogram_declaration_factored_factored -> compound_statement
 
-subprogram_declaration_factored_factored ->
-    subprogram_declarations compound_statement
-    compound_statement
+subprogram_head -> procedure id {{offset =0 }}{{checkaddgreennode(id.lex)}} subprogram_head_factored
 
-subprogram_head ->
-    procedure id {{checkaddgreennode(id.lex)}} subprogram_head_factored
+subprogram_head_factored -> arguments ; {{eye_stack.peek().args = arguments.str}}
+subprogram_head_factored -> ; {{eye_stack.peek().args = "" }}; 
 
-subprogram_head_factored ->
-    arguments {{eye_stack.peek().args = arguments.str}};
-    {{eye_stack.peek().args = "" }}; 
+arguments -> ( parameter_list ){{arguments.str = parameter_list.str}}
 
-arguments ->
-    ( parameter_list {{arguments.str = parameter_list.str}})
+parameter_list -> id : type {{checkaddbluenode(id.lex, type.type)}} parameter_list_prime {{parameter_list.str = type_to_string(type.type);parameter_list_prime.str}}
 
-parameter_list ->
-    id : type {{checkaddbluenode(id.lex, type.type)}} parameter_list_prime {{parameter_list.str = type2str(type.type).parameter_list_prime.str}}
+parameter_list_prime -> ; id : type {{checkaddbluenode(id.lex, type.type)}} parameter_list_prime {{parameter_list_prime.str = type_to_string(type.type);parameter_list_prime1.str}}
+parameter_list_prime -> e {{parameter_list_prime.str = ""}}
 
-parameter_list_prime ->
-    ; id : type {{checkaddbluenode(id.lex, type.type)}} parameter_list_prime {{parameter_list_prime.str = type2str(type.type).parameter_list_prime.str}}
-    e {{parameter_list_prime.str = ""}}
+compound_statement -> begin compound_statement_factored
 
-compound_statement ->
-    begin compound_statement_factored
+compound_statement_factored -> optional_statements end
+compound_statement_factored -> end
 
-compound_statement_factored ->
-    optional_statements end
-	end
+optional_statements -> statement_list
 
-optional_statements ->
-    statement_list
+statement_list -> statement statement_list_prime 
 
-statement_list ->
-    statement statement_list_prime 
+statement_list_prime -> ; statement statement_list_prime
+statement_list_prime -> e
 
-statement_list_prime ->
-    ; statement statement_list_prime
-    e
-
-statement ->
-    variable assignop expression
+statement -> variable assignop expression
     [0:[statment.type, <- , variable.type, expression.type],
     1: [TYPE_ERR, if, TYPE_ERR, any]
     2: [TYPE_ERR, if, any, TYPE_ERR]    
-    3: [TYPE_ERR*, if , TYPE_, !TYPE],
-    1: [void, if , TYPE, TYPE],
-    4: [TYPE_ERR*, otherwise]]
-    procedure_statement
-    begin statement_factored_one
-    if expression {{assert(expression.type == TYPE_BOOL)}} then statement statement_factored_two
-    while expression {{assert(expression.type == TYPE_BOOL)}} do statement
+    3: [void, if , TYPE_INT, TYPE_INT],
+	4: [void, if , TYPE_REAL, TYPE_REAL],
+    5: [TYPE_ERR*, otherwise]]
+statement -> procedure_statement
+statement -> begin statement_factored_one
+statement -> if expression {{assert(expression.type == TYPE_BOOL)}} then statement statement_factored_two
+statement -> while expression {{assert(expression.type == TYPE_BOOL)}} do statement
 
-statement_factored_one ->
-  optional_statements end
-  end
+statement_factored_one -> optional_statements end
+statement_factored_one -> end
 
-statement_factored_two ->
-  else statement
-  e
+statement_factored_two -> else statement
+statement_factored_two -> e
 
-variable ->
-    id {{variable.i = getttype(id.lex)}} variable_factored {{variable.type = variable_factored.type}}
+variable -> id {{variable.i = getttype(id.lex)}}{{assert_declared(id.lex)}} variable_factored {{variable.type = variable_factored.type}}
 
-variable_factored ->
-    e {{variable_factored.type = variable_factored.i}}
-    [ expression ]
+variable_factored -> e {{variable_factored.type = variable_factored.i}}
+variable_factored -> [ expression ]
 	[0:[variable_factored, <- , variable.i, expresion],
+	1:[TYPE_INT, if , TYPE_ARR_INT, TYPE_INT],
+	2:[TYPE_REAL, if, TYPE_ARR_REAL, TYPE_INT],
+	3:[TYPE_ERR, if , TYPE_ERR , any],
+	4:[TYPE_ERR, if , any , TYPE_ERR],
+	5:[TYPE_ERR*, otherwise]]
+
+procedure_statement -> call id {{procedure_statement_factored.i = gettype(id.lex)}}{{assert_declared(id.lex)}} procedure_statement_factored
+
+procedure_statement_factored -> ( expression_list ) {{assert(expression_list.str = procedure_statement_factored.str)}}
+procedure_statement_factored -> e {{procedure_statement_factored.type = procedure_statement_factored.i}}
+
+ expression_list -> expression expression_list_prime {{expression_list.str = type_to_string(expression.type);expression_list_prime.str}}
+
+expression_list_prime -> , expression expression_list_prime {{expression_list_prime.str = type_to_string(expression.type);expression_list_prime1.str}}
+expression_list_prime -> e {{expression_list_prime.str = ""}}
+
+expression -> simple_expression {{expression_factored.i = simple_expression.type}} expression_factored {{expression.type = expression_factored.type}}
+
+expression_factored -> e {{expression_factored.type = expression_factored.i}}
+expression_factored -> relop simple_expression
+	[0:[expression_factored.type, <- , expresseion_factored.i, simple_expression],
+	1:[TYPE_BOOL, if, TYPE_INT, TYPE_INT],
+	2:[TYPE_BOOL, if, TYPE_REAL, TYPE_REAL],
+	3:[TYPE_ERR, if , TYPE_ERR , any],
+	4:[TYPE_ERR, if , any , TYPE_ERR],
+	5:[TYPE_ERR*, otherwise]]
+
+simple_expression -> term {{simple_expression_prime.i = term.type}} simple_expression_prime {{simple_expression.type = simple_expression_prime.type}}
+simple_expression -> sign term {{TYPE_ERR* if term.type != TYPE_REAL or TYPE_INT or TYPE_BOOL}};{{simple_expression_prime.i = term.type}}simple_expression_prime {{simple_expression.type = simple_expression_prime.type}}
+
+simple_expression_prime -> e {{simple_expression_prime.type = simple_expression_prime.i}}
+simple_expression_prime -> addop term simple_expression_prime {{simple_expression_prime.type = simple_expression_prime1.type}}
+	[0:[simple_expression_prime1, <- , simple_expression_prime.i, addop, term.type],
+	1:[TYPE_INT, if, TYPE_INT, + or -, TYPE_INT],
+	2:[TYPE_REAL, if, TYPE_REAL, + or -, TYPE_REAL],
+	4:[TYPE_BOOL, if, TYPE_BOOL, or, TYPE_BOOL],
+	5:[TYPE_ERR, if , TYPE_ERR , any],
+	6:[TYPE_ERR, if , any , TYPE_ERR],
+	7:[TYPE_ERR*, otherwise]]
+
+term -> factor {{term_prime.i = factor.type}} term_prime {{ term.type = term_prime.type}}
+
+term_prime -> e {{term_prime.type = term_prime.i}}
+term_prime -> mulop factor term_prime
+	[0:[term_prime1, <- , term_prime.i, mulop, factor.type],
+	1:[TYPE_INT, if, TYPE_INT, * or /, TYPE_INT],
+	2:[TYPE_REAL, if, TYPE_REAL, * or /, TYPE_REAL],
+	3:[TYPE_INT, if, TYPE_INT, mod, TYPE_INT],
+	4:[TYPE_BOOL, if, TYPE_BOOL, and, TYPE_BOOL],
+	5:[TYPE_ERR, if , TYPE_ERR , any],
+	6:[TYPE_ERR, if , any , TYPE_ERR],
+	7:[TYPE_ERR*, otherwise]]
+
+factor -> id {{factor_prime.i = gettype(id.lex)}}{{assert_declared(id.lex)}} factor_prime {{factor.type = factor_prime.type}}
+factor -> num {{factor.type = num.type}}
+factor -> ( expression ) {{factor.type = expression.type}}
+factor -> not factor {{factor.type = factor1.type if factor1.type == TYPE_BOOL or TYPE_ERR}}
+
+factor_prime ->	[ expression ]
+	[0:[factor_prime.type, <- , expression.type, factor_prime.i],
 	1:[TYPE_ERR, if , TYPE_ERR , any],
 	2:[TYPE_ERR, if , any , TYPE_ERR],
 	3:[TYPE_ERR*, if , any , !TYPE_INT],
 	4:[TYPE_INT, if , TYPE_ARR_INT, TYPE_INT],
 	5:[TYPE_REAL, if, TYPE_ARR_REAL, TYPE_INT]]
+factor_prime ->	e {{factor_prime.type = factor_prime.i}}
 
-procedure_statement ->
-    call id procedure_statement_factored
-
-procedure_statement_factored ->
-    e
-    ( expression_list )
-
- expression_list ->
-    expression expression_list_prime
-
-expression_list_prime ->
-    , expression expression_list_prime
-    e
-
-expression ->
-    simple_expression expression_factored
-
-expression_factored ->
-    e
-    relop simple_expression
-
-simple_expression ->
-    term simple_expression_prime
-    sign term simple_expression_prime
-
-simple_expression_prime ->
-    addop term simple_expression_prime
-    e
-
-term ->
-    factor term_prime
-
-term_prime ->
-    mulop factor term_prime
-    e
-
-factor ->
-    id factor_prime
-    num
-    ( expression )
-    not factor
-
-factor_prime ->	
-	[ expression ]
-	e 
-
-sign ->
-    +
-    -
+sign -> +
+sign -> -
 

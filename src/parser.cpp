@@ -468,7 +468,7 @@ RetType type_array (ParserContext &pc, RetType in)
 	auto t = StandardType (pc, in);
 	if (ret != RT_err)
 	{
-		int size = GetNumValInt (te) - GetNumValInt (ts) + 1;
+		int size = GetNumValInt (te) - GetNumValInt (ts);
 		if (size <= 0)
 		{
 			pc.LogErrorSem (in, "Array bounds must be positive");
@@ -627,7 +627,7 @@ void SubprogramHeadFactored (ParserContext &pc, RetType in)
 	switch (pc.Current ().type)
 	{
 		case (TT::P_O):
-			in = Arguments (pc, in);
+			Arguments (pc, in);
 			pc.Match (TT::SEMIC, in);
 			break;
 		case (TT::SEMIC):
