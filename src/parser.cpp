@@ -29,6 +29,9 @@ ProcedureID ParseTree::AddSubProcedure (SymbolID newProcName)
 	ProcedureID curProc = eye;
 	while (curProc != -1)
 	{
+
+		if (newProcName == procedures.at (curProc).name) return -1;
+
 		for (auto [id, name] : procedures.at (curProc).sub_procs)
 		{
 			if (name == newProcName)
@@ -79,25 +82,32 @@ std::vector<RetType> ParseTree::SubProcedureType (SymbolID s)
 bool ParseTree::AddVariable (SymbolID newName, RetType type, bool isParam)
 {
 	// TODO: check for procedures with same name
+	if (procedures.count (eye) == 1)
+	{
+		for (auto [name, type] : procedures.at (eye).params)
+		{
+			if (newName == name)
+			{ // error
+				return true;
+			}
+		}
+		for (auto [name, type] : procedures.at (eye).locals)
+		{
+			if (newName == name)
+			{ // error
+				return true;
+			}
+		}
 
-	for (auto [name, type] : procedures.at (eye).params)
-	{
-		if (newName == name)
-		{ // error
-			return true;
+		if (isParam)
+		{ procedures.at (eye).params.push_back (std::pair<SymbolID, RetType> (newName, type)); } else
+		{
+			procedures.at (eye).locals.push_back (std::pair<SymbolID, RetType> (newName, type));
 		}
 	}
-	for (auto [name, type] : procedures.at (eye).locals)
+	else
 	{
-		if (newName == name)
-		{ // error
-			return true;
-		}
-	}
-	if (isParam)
-	{ procedures.at (eye).params.push_back (std::pair<SymbolID, RetType> (newName, type)); } else
-	{
-		procedures.at (eye).locals.push_back (std::pair<SymbolID, RetType> (newName, type));
+		int i = 0;
 	}
 	return false;
 }
@@ -120,9 +130,11 @@ std::optional<RetType> ParseTree::CheckVariable (SymbolID s)
 	return {};
 }
 
-
 void ParseTree::Push (ProcedureID id) { eye = id; }
-void ParseTree::Pop () { eye = procedures.at (eye).parent; }
+void ParseTree::Pop ()
+{
+	if (procedures.count (eye) == 1) eye = procedures.at (eye).parent;
+}
 
 ParserContext::ParserContext (CompilationContext &context, TokenStream &ts, Logger &logger)
 : context (context), ts (ts), logger (logger)
@@ -474,7 +486,7 @@ RetType type_array (ParserContext &pc, RetType in)
 	auto t = StandardType (pc, in);
 	if (ret != RT_err)
 	{
-		int size = GetNumValInt (te) - GetNumValInt (ts);
+		int size = GetNumValInt (te) - GetNumValInt (ts) + 1;
 		if (size <= 0)
 		{
 			pc.LogErrorSem (in, "Array bounds must be positive");
@@ -612,7 +624,7 @@ void sub_prog_head_procedure (ParserContext &pc, RetType in)
 	ProcedureID cur = pc.tree.AddSubProcedure (GetSymbol (pc.Current ()));
 	if (cur == -1) { pc.LogErrorUniqueProcedure (in, pc.Current ()); }
 	pc.Match (TT::ID, in);
-	pc.tree.Push (cur);
+	if (cur != -1) pc.tree.Push (cur);
 
 	return SubprogramHeadFactored (pc, in);
 }
@@ -698,7 +710,7 @@ RetType param_list_prime_id (ParserContext &pc, RetType in)
 	if (HasSymbol (tid))
 	{
 		bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
-		if (exists) { pc.LogErrorUniqueIdentifier (in, pc.Current ()); }
+		if (exists) { pc.LogErrorUniqueIdentifier (in, tid); }
 	}
 	return ParameterListPrime (pc, in);
 }
