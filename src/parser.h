@@ -118,11 +118,11 @@ class ParserContext
 
 	void LogErrorExpectedGot (std::vector<TT> const &types);
 
-	void LogErrorSem (RetType in, std::string msg);
+	void LogErrorSem (RetType in, std::string msg, TokenInfo& tok);
 
-	void LogErrorUniqueProcedure (RetType in, TokenInfo t);
-	void LogErrorIdentifierScope (RetType in, TokenInfo t);
-	void LogErrorUniqueIdentifier (RetType in, TokenInfo t);
+	void LogErrorUniqueProcedure (RetType in, TokenInfo& t);
+	void LogErrorIdentifierScope (RetType in, TokenInfo& t);
+	void LogErrorUniqueIdentifier (RetType in, TokenInfo& t);
 
 	void Print (OutputFileHandle &out);
 

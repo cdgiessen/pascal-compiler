@@ -149,26 +149,26 @@ void ParserContext::LogErrorExpectedGot (std::vector<TT> const &types)
 }
 
 
-void ParserContext::LogErrorSem (RetType in, std::string msg)
+void ParserContext::LogErrorSem (RetType in, std::string msg, TokenInfo& t)
 {
 	if (in != RT_err)
 		logger.AddSemErrPrint (
-		Current ().line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", "SEMERR: " + msg); });
+		t.line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", "SEMERR: " + msg); });
 }
 
-void ParserContext::LogErrorUniqueProcedure (RetType in, TokenInfo t)
+void ParserContext::LogErrorUniqueProcedure (RetType in, TokenInfo& t)
 {
-	LogErrorSem (in, "Procedure \"" + SymbolName (GetSymbol (t)) + "\" not unique in current scope");
+	LogErrorSem (in, "Procedure \"" + SymbolName (GetSymbol (t)) + "\" not unique in current scope", t);
 }
 
-void ParserContext::LogErrorIdentifierScope (RetType in, TokenInfo t)
+void ParserContext::LogErrorIdentifierScope (RetType in, TokenInfo& t)
 {
-	LogErrorSem (in, "Identifier \"" + SymbolName (GetSymbol (t)) + "\" not in current scope");
+	LogErrorSem (in, "Identifier \"" + SymbolName (GetSymbol (t)) + "\" not in current scope", t);
 }
 
-void ParserContext::LogErrorUniqueIdentifier (RetType in, TokenInfo t)
+void ParserContext::LogErrorUniqueIdentifier (RetType in, TokenInfo& t)
 {
-	LogErrorSem (in, "Identifier \"" + SymbolName (GetSymbol (t)) + "\" not unique in current scope");
+	LogErrorSem (in, "Identifier \"" + SymbolName (GetSymbol (t)) + "\" not unique in current scope", t);
 }
 
 
