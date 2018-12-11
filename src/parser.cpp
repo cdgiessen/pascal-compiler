@@ -161,24 +161,24 @@ void ParserContext::LogErrorExpectedGot (std::vector<TT> const &types)
 }
 
 
-void ParserContext::LogErrorSem (RetType in, std::string msg, TokenInfo& t)
+void ParserContext::LogErrorSem (RetType in, std::string msg, TokenInfo const& t)
 {
 	if (in != RT_err)
 		logger.AddSemErrPrint (
 		t.line_location, [=](FILE *fp) { fmt::print (fp, "{}\n", "SEMERR: " + msg); });
 }
 
-void ParserContext::LogErrorUniqueProcedure (RetType in, TokenInfo& t)
+void ParserContext::LogErrorUniqueProcedure (RetType in, TokenInfo const& t)
 {
 	LogErrorSem (in, "Procedure \"" + SymbolName (GetSymbol (t)) + "\" not unique in current scope", t);
 }
 
-void ParserContext::LogErrorIdentifierScope (RetType in, TokenInfo& t)
+void ParserContext::LogErrorIdentifierScope (RetType in, TokenInfo const& t)
 {
 	LogErrorSem (in, "Identifier \"" + SymbolName (GetSymbol (t)) + "\" not in current scope", t);
 }
 
-void ParserContext::LogErrorUniqueIdentifier (RetType in, TokenInfo& t)
+void ParserContext::LogErrorUniqueIdentifier (RetType in, TokenInfo const& t)
 {
 	LogErrorSem (in, "Identifier \"" + SymbolName (GetSymbol (t)) + "\" not unique in current scope", t);
 }
@@ -469,7 +469,7 @@ RetType type_array (ParserContext &pc, RetType in)
 	if (std::get<NumType> (ts.attrib).val.index () != 0)
 	{
 		ret = RT_err;
-		pc.LogErrorSem (in, "Array right bound not an int");
+		pc.LogErrorSem (in, "Array right bound not an int", ts);
 	}
 	pc.Match (TT::NUM, in);
 	pc.Match (TT::DOT_DOT, in);
@@ -478,7 +478,7 @@ RetType type_array (ParserContext &pc, RetType in)
 	if (std::get<NumType> (te.attrib).val.index () != 0)
 	{
 		ret = RT_err;
-		pc.LogErrorSem (in, "Array left bound not an int");
+		pc.LogErrorSem (in, "Array left bound not an int", te);
 	}
 	pc.Match (TT::NUM, in);
 	pc.Match (TT::B_C, in);
@@ -489,7 +489,7 @@ RetType type_array (ParserContext &pc, RetType in)
 		int size = GetNumValInt (te) - GetNumValInt (ts) + 1;
 		if (size <= 0)
 		{
-			pc.LogErrorSem (in, "Array bounds must be positive");
+			pc.LogErrorSem (in, "Array bounds must be positive", te);
 			return RT_err;
 		}
 		else if (t == RT_int)
@@ -528,7 +528,7 @@ RetType std_type (ParserContext &pc, RetType in)
 			return RT_real;
 		default:
 			pc.LogErrorSem (in,
-			"Identifier \"" + pc.SymbolName (GetSymbol (pc.Current ())) + "\" not a valid type (integer or real)");
+			"Identifier \"" + pc.SymbolName (GetSymbol (pc.Current ())) + "\" not a valid type (integer or real)", t);
 			return RT_err;
 	}
 }
@@ -677,7 +677,7 @@ RetType param_list_id (ParserContext &pc, RetType in)
 	auto t = Type (pc, in);
 	// if (t == RT_err) { pc.LogErrorSem (in, "Parameter type cannot be an error"); }
 
-	if (t == RT_none) { pc.LogErrorSem (in, "Parameter type cannot be none"); }
+	if (t == RT_none) { pc.LogErrorSem (in, "Parameter type cannot be none", pc.Current()); }
 
 	if (HasSymbol (tid))
 	{
@@ -704,9 +704,9 @@ RetType param_list_prime_id (ParserContext &pc, RetType in)
 	pc.Match (TT::ID, in);
 	pc.Match (TT::COLON, in);
 	auto t = Type (pc, in);
-	if (t == RT_err) { pc.LogErrorSem (in, "Parameter type cannot be an error"); }
+	if (t == RT_err) { pc.LogErrorSem (in, "Parameter type cannot be an error", pc.Current()); }
 
-	if (t == RT_none) { pc.LogErrorSem (in, "Parameter type cannot be none"); }
+	if (t == RT_none) { pc.LogErrorSem (in, "Parameter type cannot be none", pc.Current()); }
 	if (HasSymbol (tid))
 	{
 		bool exists = pc.tree.AddVariable (GetSymbol (tid), t, true);
@@ -814,12 +814,13 @@ void stmt_id (ParserContext &pc, RetType in)
 {
 	auto ret = Variable (pc, in);
 	pc.Match (TT::A_OP, in);
+	auto ll = pc.Current();
 	auto eret = Expression (pc, ret);
 	if (ret == RT_err || eret == RT_err) return;
 	if (ret == RT_int && eret == RT_int || ret == RT_real && eret == RT_real) return;
 
 	if (ret != eret)
-		pc.LogErrorSem (in, "Cannot assign " + eret.to_string () + " to " + ret.to_string ());
+		pc.LogErrorSem (in, "Cannot assign " + eret.to_string () + " to " + ret.to_string (), ll);
 }
 
 void stmt_if (ParserContext &pc, RetType in)
@@ -827,7 +828,7 @@ void stmt_if (ParserContext &pc, RetType in)
 	pc.Match (TT::IF, in);
 	auto eret = Expression (pc, RT_none);
 	if (eret != RT_err && eret != RT_bool)
-	{ pc.LogErrorSem (in, "Conditional must use a boolean type, not " + eret.to_string ()); }
+	{ pc.LogErrorSem (in, "Conditional must use a boolean type, not " + eret.to_string (), pc.Current()); }
 	pc.Match (TT::THEN, in);
 	Statement (pc, RT_none);
 	StatementFactoredElse (pc, RT_none);
@@ -837,7 +838,7 @@ void stmt_while (ParserContext &pc, RetType in)
 	pc.Match (TT::WHILE, in);
 	auto ret = Expression (pc, RT_none);
 	if (ret != RT_bool)
-	{ pc.LogErrorSem (in, "While condition must use a boolean type, not " + ret.to_string ()); }
+	{ pc.LogErrorSem (in, "While condition must use a boolean type, not " + ret.to_string (), pc.Current()); }
 	pc.Match (TT::DO, in);
 	Statement (pc, RT_none);
 }
@@ -943,11 +944,11 @@ RetType var_factored_bracket_open (ParserContext &pc, RetType in)
 	}
 	else if (rt != RT_int)
 	{
-		pc.LogErrorSem (in, "Array index must resolve to an int, not " + rt.to_string ());
+		pc.LogErrorSem (in, "Array index must resolve to an int, not " + rt.to_string (),pc.Current());
 	}
 	else if (!IsArrInt (in) || !IsArrReal (in))
 	{
-		pc.LogErrorSem (in, "Cannot array index a non array type");
+		pc.LogErrorSem (in, "Cannot array index a non array type", pc.Current());
 	}
 	return RT_err;
 }
@@ -973,7 +974,7 @@ RetType proc_stmt_call (ParserContext &pc, RetType in)
 	if (!exists)
 	{
 		ret = RT_err;
-		pc.LogErrorSem (in, "Procedure \"" + pc.SymbolName (GetSymbol (pc.Current ())) + "\" not in current scope");
+		pc.LogErrorSem (in, "Procedure \"" + pc.SymbolName (GetSymbol (pc.Current ())) + "\" not in current scope", pc.Current());
 	}
 	auto tid = GetSymbol (pc.Current ());
 	pc.Match (TT::ID, in);
@@ -1006,12 +1007,12 @@ RetType check_param_list_with_expr_list (ParserContext &pc, SymbolID id, RetType
 				if (param_list.at (i) == RT_err)
 					pc.LogErrorSem (in,
 					"Procedures " + pc.SymbolName (id)
-					+ "'s parameter's are ill-formed. Cannot invoke an invalid procedure.");
+					+ "'s parameter's are ill-formed. Cannot invoke an invalid procedure.", pc.Current());
 
 				else
 					pc.LogErrorSem (in,
 					"Argument " + std::to_string (i) + " is type " + expr_list.at (i).to_string ()
-					+ " when it should be of type " + param_list.at (i).to_string ());
+					+ " when it should be of type " + param_list.at (i).to_string (), pc.Current());
 				isEqual = false;
 				ret = RT_err;
 			}
@@ -1021,14 +1022,14 @@ RetType check_param_list_with_expr_list (ParserContext &pc, SymbolID id, RetType
 			ret = RT_err;
 			pc.LogErrorSem (in,
 			"The call to procedure \"" + pc.SymbolName (id) + "\" has "
-			+ std::to_string (param_list.size () - expr_list.size ()) + " to few arguments");
+			+ std::to_string (param_list.size () - expr_list.size ()) + " to few arguments", pc.Current());
 		}
 		else if (param_list.size () < expr_list.size ())
 		{
 			ret = RT_err;
 			pc.LogErrorSem (in,
 			"The call to procedure \"" + pc.SymbolName (id) + "\" has "
-			+ std::to_string (expr_list.size () - param_list.size ()) + " to many arguments");
+			+ std::to_string (expr_list.size () - param_list.size ()) + " to many arguments", pc.Current());
 		}
 		if (!isEqual) { ret = RT_err; }
 	}
@@ -1124,12 +1125,13 @@ RetType Expression (ParserContext &pc, RetType in)
 RetType expr_factored_relop (ParserContext &pc, RetType in)
 {
 	pc.Match (TT::RELOP, in);
+	auto ll = pc.Current();
 	auto ser = SimpleExpression (pc, in);
 	if (in == RT_err || ser == RT_err) return RT_err;
 	if ((in == RT_int && ser == RT_int) || (in == RT_real && ser == RT_real)) { return RT_bool; }
 	else
 	{
-		pc.LogErrorSem (in, "Cannot compare types " + in.to_string () + " and " + ser.to_string ());
+		pc.LogErrorSem (in, "Cannot compare types " + in.to_string () + " and " + ser.to_string (),ll);
 		return RT_err;
 	}
 }
@@ -1172,7 +1174,7 @@ RetType SimpleExpression (ParserContext &pc, RetType in)
 			in = Term (pc, in);
 			if (in != RT_int && in != RT_real)
 			{
-				pc.LogErrorSem (in, "Cannot add a sign to a non int or real term");
+				pc.LogErrorSem (in, "Cannot add a sign to a non int or real term", pc.Current());
 				in = RT_err;
 			}
 			return SimpleExpressionPrime (pc, in);
@@ -1204,7 +1206,7 @@ RetType simp_expr_prime_add (ParserContext &pc, RetType in)
 		}
 		else
 		{
-			pc.LogErrorSem (in, "Cannot add types " + in.to_string () + " and " + tr.to_string ());
+			pc.LogErrorSem (in, "Cannot add types " + in.to_string () + " and " + tr.to_string (), pc.Current());
 			sep = RT_err;
 		}
 	}
@@ -1217,7 +1219,7 @@ RetType simp_expr_prime_add (ParserContext &pc, RetType in)
 		}
 		else
 		{
-			pc.LogErrorSem (in, "Cannot or types " + in.to_string () + " and " + tr.to_string ());
+			pc.LogErrorSem (in, "Cannot or types " + in.to_string () + " and " + tr.to_string (), pc.Current());
 			sep = RT_err;
 		}
 	}
@@ -1282,7 +1284,7 @@ RetType term_prime_mulop (ParserContext &pc, RetType in)
 		}
 		else
 		{
-			pc.LogErrorSem (in, "Cannot mulop between " + in.to_string () + " and " + fr.to_string ());
+			pc.LogErrorSem (in, "Cannot mulop between " + in.to_string () + " and " + fr.to_string (), pc.Current());
 			itp = RT_err;
 		}
 	}
@@ -1295,7 +1297,7 @@ RetType term_prime_mulop (ParserContext &pc, RetType in)
 		}
 		else
 		{
-			pc.LogErrorSem (in, "Cannot perform mod on non int values");
+			pc.LogErrorSem (in, "Cannot perform mod on non int values", pc.Current());
 			itp = RT_err;
 		}
 	}
@@ -1308,7 +1310,7 @@ RetType term_prime_mulop (ParserContext &pc, RetType in)
 		}
 		else
 		{
-			pc.LogErrorSem (in, "Cannot and non boolean expressions");
+			pc.LogErrorSem (in, "Cannot and non boolean expressions", pc.Current());
 			itp = RT_err;
 		}
 	}
@@ -1375,7 +1377,7 @@ RetType factor_not (ParserContext &pc, RetType in)
 	if (ret == RT_bool) { return RT_bool; }
 	else if (ret != RT_err)
 	{
-		pc.LogErrorSem (in, "Can only negate booleans, not " + ret.to_string () + "s");
+		pc.LogErrorSem (in, "Can only negate booleans, not " + ret.to_string () + "s", pc.Current());
 	}
 	return RT_err;
 }
@@ -1408,10 +1410,10 @@ RetType factor_prime_braket_open (ParserContext &pc, RetType in)
 	if (in == RT_err || ret == RT_err) return RT_err;
 
 	if (ret != RT_int)
-	{ pc.LogErrorSem (in, "Array index must be an int, not " + ret.to_string ()); }
+	{ pc.LogErrorSem (in, "Array index must be an int, not " + ret.to_string (), pc.Current()); }
 	else if (ret != RT_arr_int || ret != RT_arr_real)
 	{
-		pc.LogErrorSem (in, "Cannot array index a non array type");
+		pc.LogErrorSem (in, "Cannot array index a non array type", pc.Current());
 	}
 	return RT_err;
 }

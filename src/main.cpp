@@ -36,7 +36,7 @@ int main (int argc, char *argv[])
 	// file_list.push_back ("test_input/test_some_errors.txt");
 	// file_list.push_back("test_input/test_syn_error.txt");
 
-	file_list.push_back ("test_input/final_test.txt");
+	file_list.push_back ("test_input/test_sem.txt");
 
 	// if (argc == 2) { inFileName = std::string (argv[1]); }
 
